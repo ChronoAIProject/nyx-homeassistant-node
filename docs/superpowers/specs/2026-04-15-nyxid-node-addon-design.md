@@ -77,10 +77,8 @@ arch:
   - aarch64
 homeassistant_api: true
 host_network: true
-map:
-  - config:rw
 options:
-  nyxid_server_url: "wss://auth.nyxid.io/api/v1/nodes/ws"
+  nyxid_server_url: "wss://nyx-api.chrono-ai.fun/api/v1/nodes/ws"
   registration_token: ""
   node_name: "homeassistant"
   log_level: "info"

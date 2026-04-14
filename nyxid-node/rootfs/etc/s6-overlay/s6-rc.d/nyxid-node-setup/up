@@ -70,8 +70,7 @@ if [ -f "${SERVICES_FILE}" ]; then
         done
         if [ "${found}" = "false" ]; then
             bashio::log.info "Removing stale service credential: ${old_slug}"
-            nyxid node credentials remove \
-                --config "${NYXID_CONFIG}" \
+            nyxid node credentials --config "${NYXID_CONFIG}" remove \
                 --service "${old_slug}" || true
         fi
     done < "${SERVICES_FILE}"
@@ -82,8 +81,7 @@ fi
 # --------------------------------------------------------------------------
 bashio::log.info "Updating Home Assistant API credential..."
 
-nyxid node credentials add \
-    --config "${NYXID_CONFIG}" \
+nyxid node credentials --config "${NYXID_CONFIG}" add \
     --service "homeassistant" \
     --header "Authorization" \
     --secret-format bearer \
@@ -104,16 +102,14 @@ for index in $(bashio::config 'services|keys'); do
     bashio::log.info "Configuring service: ${slug} → ${target_url}"
 
     if [ "${cred_type}" = "header" ]; then
-        nyxid node credentials add \
-            --config "${NYXID_CONFIG}" \
+        nyxid node credentials --config "${NYXID_CONFIG}" add \
             --service "${slug}" \
             --header "${cred_name}" \
             --secret-format raw \
             --value "${cred_value}" \
             --url "${target_url}"
     else
-        nyxid node credentials add \
-            --config "${NYXID_CONFIG}" \
+        nyxid node credentials --config "${NYXID_CONFIG}" add \
             --service "${slug}" \
             --query-param "${cred_name}" \
             --value "${cred_value}" \
