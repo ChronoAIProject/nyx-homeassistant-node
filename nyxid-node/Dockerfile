@@ -1,6 +1,6 @@
 # Global ARGs
 ARG BUILD_FROM
-ARG NYXID_VERSION=v0.2.0
+ARG NYXID_VERSION=0.2.0
 
 # Stage 1: Get nyxid binary from official image (Debian-based)
 FROM ghcr.io/chronoaiproject/nyxid/node-agent:${NYXID_VERSION} AS nyxid-bin

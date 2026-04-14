@@ -54,7 +54,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             BUILD_FROM=${{ matrix.base_image }}
-            NYXID_VERSION=v0.2.0
+            NYXID_VERSION=0.2.0
           tags: |
             ghcr.io/chronoaiproject/nyx-homeassistant-node/${{ matrix.arch }}:${{ steps.version.outputs.version }}
             ghcr.io/chronoaiproject/nyx-homeassistant-node/${{ matrix.arch }}:latest

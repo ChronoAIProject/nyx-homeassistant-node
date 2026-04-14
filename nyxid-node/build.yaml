@@ -2,4 +2,4 @@ build_from:
   amd64: "ghcr.io/home-assistant/amd64-base-debian:bookworm"
   aarch64: "ghcr.io/home-assistant/aarch64-base-debian:bookworm"
 args:
-  NYXID_VERSION: "v0.2.0"
+  NYXID_VERSION: "0.2.0"
