@@ -16,12 +16,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - amd64
-          - aarch64
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            base_image: ghcr.io/home-assistant/amd64-base:3.21
+          - arch: aarch64
+            platform: linux/arm64
+            base_image: ghcr.io/home-assistant/aarch64-base:3.21
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Get add-on version
+        id: version
+        run: |
+          version=$(grep '^version:' nyxid-node/config.yaml | awk '{print $2}' | tr -d '"')
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -33,10 +43,18 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push
-        uses: home-assistant/builder@master
+        uses: docker/build-push-action@v6
         with:
-          args: |
-            --${{ matrix.arch }} \
-            --target nyxid-node \
-            --docker-hub "ghcr.io/chronoaiproject/nyx-homeassistant-node"
+          context: nyxid-node
+          push: true
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            BUILD_FROM=${{ matrix.base_image }}
+            NYXID_VERSION=main
+          tags: |
+            ghcr.io/chronoaiproject/nyx-homeassistant-node/${{ matrix.arch }}:${{ steps.version.outputs.version }}
+            ghcr.io/chronoaiproject/nyx-homeassistant-node/${{ matrix.arch }}:latest
