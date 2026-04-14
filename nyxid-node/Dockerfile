@@ -3,7 +3,7 @@ ARG BUILD_FROM
 ARG NYXID_VERSION=main
 
 # Stage 1: Compile nyxid CLI from source
-FROM rust:1.82-alpine3.21 AS builder
+FROM rust:1-alpine AS builder
 
 RUN apk add --no-cache \
     musl-dev \
