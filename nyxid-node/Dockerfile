@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && curl -fsSL "https://github.com/hassio-addons/bashio/archive/refs/tags/v0.16.2.tar.gz" | tar xzf - -C /tmp \
     && cp -r /tmp/bashio-0.16.2/lib/* /usr/lib/bashio/ \
     && rm -rf /tmp/bashio-0.16.2 \
+    && chmod +x /usr/lib/bashio/bashio.sh \
     && ln -sf /usr/lib/bashio/bashio.sh /usr/bin/bashio \
     && apt-get purge -y --auto-remove curl \
     && rm -rf /var/lib/apt/lists/*
