@@ -22,3 +22,5 @@ RUN apt-get update \
 COPY --from=nyxid-bin /usr/local/bin/nyxid /usr/local/bin/nyxid
 
 COPY rootfs /
+
+ENTRYPOINT ["/init"]
