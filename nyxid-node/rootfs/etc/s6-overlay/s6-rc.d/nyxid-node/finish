@@ -1,0 +1,11 @@
+#!/command/with-contenv bashio
+# ==============================================================================
+# NyxID Node Add-on — Finish (cleanup on stop/crash)
+# ==============================================================================
+
+declare exit_code=${1}
+declare signal=${2}
+
+if [ "${exit_code}" -ne 0 ]; then
+    bashio::log.warning "NyxID node agent exited with code ${exit_code} (signal ${signal})"
+fi

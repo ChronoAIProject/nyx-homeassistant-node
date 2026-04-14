@@ -1,0 +1,15 @@
+#!/command/with-contenv bashio
+# ==============================================================================
+# NyxID Node Add-on — Run the node agent
+# ==============================================================================
+
+declare NYXID_CONFIG="/data/nyxid-node"
+declare log_level
+
+log_level=$(bashio::config 'log_level')
+
+bashio::log.info "Starting NyxID node agent (log_level=${log_level})..."
+
+exec nyxid node start \
+    --config "${NYXID_CONFIG}" \
+    --log-level "${log_level}"
