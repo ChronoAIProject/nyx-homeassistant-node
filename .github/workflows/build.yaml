@@ -8,21 +8,11 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.arch }} image
+    name: Build multi-arch image
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            platform: linux/amd64
-            base_image: ghcr.io/home-assistant/amd64-base-debian:bookworm
-          - arch: aarch64
-            platform: linux/arm64
-            base_image: ghcr.io/home-assistant/aarch64-base-debian:bookworm
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,10 +41,9 @@ jobs:
         with:
           context: nyxid-node
           push: true
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64,linux/arm64
           build-args: |
-            BUILD_FROM=${{ matrix.base_image }}
             NYXID_VERSION=0.2.0
           tags: |
-            ghcr.io/chronoaiproject/nyx-homeassistant-node/${{ matrix.arch }}:${{ steps.version.outputs.version }}
-            ghcr.io/chronoaiproject/nyx-homeassistant-node/${{ matrix.arch }}:latest
+            ghcr.io/chronoaiproject/nyx-homeassistant-node:${{ steps.version.outputs.version }}
+            ghcr.io/chronoaiproject/nyx-homeassistant-node:latest

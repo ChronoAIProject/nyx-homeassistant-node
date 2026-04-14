@@ -10,7 +10,7 @@ arch:
   - aarch64
 homeassistant_api: true
 host_network: true
-image: "ghcr.io/chronoaiproject/nyx-homeassistant-node/{arch}"
+image: "ghcr.io/chronoaiproject/nyx-homeassistant-node"
 options:
   nyxid_server_url: "wss://nyx-api.chrono-ai.fun/api/v1/nodes/ws"
   registration_token: ""

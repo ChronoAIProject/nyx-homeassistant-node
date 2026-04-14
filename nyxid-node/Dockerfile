@@ -1,15 +1,16 @@
-# Global ARGs
-ARG BUILD_FROM
 ARG NYXID_VERSION=0.2.0
 
-# Stage 1: Get nyxid binary from official image (Debian-based)
+# Stage 1: Get nyxid binary from official multi-arch image
 FROM ghcr.io/chronoaiproject/nyxid/node-agent:${NYXID_VERSION} AS nyxid-bin
 
-# Stage 2: HA runtime (Debian-based to match glibc)
-FROM ${BUILD_FROM}
+# Stage 2: Per-arch HA base images (Docker selects via TARGETARCH)
+FROM ghcr.io/home-assistant/amd64-base-debian:bookworm AS base-amd64
+FROM ghcr.io/home-assistant/aarch64-base-debian:bookworm AS base-arm64
 
-# Install runtime dependencies
-# libdbus is needed at runtime for the dbus crate (linked dynamically)
+# Stage 3: Runtime — select base by architecture
+ARG TARGETARCH
+FROM base-${TARGETARCH}
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
