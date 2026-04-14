@@ -19,10 +19,10 @@ jobs:
         include:
           - arch: amd64
             platform: linux/amd64
-            base_image: ghcr.io/home-assistant/amd64-base:3.21
+            base_image: ghcr.io/home-assistant/amd64-base-debian:bookworm
           - arch: aarch64
             platform: linux/arm64
-            base_image: ghcr.io/home-assistant/aarch64-base:3.21
+            base_image: ghcr.io/home-assistant/aarch64-base-debian:bookworm
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             BUILD_FROM=${{ matrix.base_image }}
-            NYXID_VERSION=main
+            NYXID_VERSION=v0.2.0
           tags: |
             ghcr.io/chronoaiproject/nyx-homeassistant-node/${{ matrix.arch }}:${{ steps.version.outputs.version }}
             ghcr.io/chronoaiproject/nyx-homeassistant-node/${{ matrix.arch }}:latest

@@ -1,40 +1,23 @@
-# Global ARGs — must be before first FROM to use in FROM instructions
+# Global ARGs
 ARG BUILD_FROM
-ARG NYXID_VERSION=main
+ARG NYXID_VERSION=v0.2.0
 
-# Stage 1: Compile nyxid CLI from source
-FROM rust:1-alpine AS builder
+# Stage 1: Get nyxid binary from official image (Debian-based)
+FROM ghcr.io/chronoaiproject/nyxid/node-agent:${NYXID_VERSION} AS nyxid-bin
 
-RUN apk add --no-cache \
-    musl-dev \
-    openssl-dev \
-    openssl-libs-static \
-    pkgconf \
-    git \
-    perl \
-    make \
-    dbus-dev \
-    cmake
-
-# Re-declare to pull global value into this stage
-ARG NYXID_VERSION
-RUN git clone --depth 1 --branch ${NYXID_VERSION} \
-    https://github.com/ChronoAIProject/NyxID.git /build/nyxid
-
-WORKDIR /build/nyxid
-
-ENV OPENSSL_STATIC=1
-RUN cargo build --release --bin nyxid \
-    && strip target/release/nyxid
-
-# Stage 2: Runtime image
+# Stage 2: HA runtime (Debian-based to match glibc)
 FROM ${BUILD_FROM}
 
-RUN apk add --no-cache \
-    ca-certificates \
-    jq \
-    bash
+# Install runtime dependencies
+# libdbus is needed at runtime for the dbus crate (linked dynamically)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        jq \
+        bash \
+        libdbus-1-3 \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /build/nyxid/target/release/nyxid /usr/local/bin/nyxid
+COPY --from=nyxid-bin /usr/local/bin/nyxid /usr/local/bin/nyxid
 
 COPY rootfs /
