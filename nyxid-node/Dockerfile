@@ -12,7 +12,9 @@ RUN apk add --no-cache \
     pkgconf \
     git \
     perl \
-    make
+    make \
+    dbus-dev \
+    cmake
 
 # Re-declare to pull global value into this stage
 ARG NYXID_VERSION
