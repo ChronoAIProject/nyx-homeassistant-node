@@ -18,7 +18,8 @@ RUN apk add --no-cache \
     jq \
     bash \
     gcompat \
-    libgcc
+    libgcc \
+    dbus-libs
 
 COPY --from=nyxid-bin /usr/local/bin/nyxid /usr/local/bin/nyxid
 
