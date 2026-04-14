@@ -26,7 +26,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && cp -r /tmp/bashio-0.16.2/lib/* /usr/lib/bashio/ \
     && rm -rf /tmp/bashio-0.16.2 \
     && chmod +x /usr/lib/bashio/bashio.sh \
-    && ln -sf /usr/lib/bashio/bashio.sh /usr/bin/bashio \
+    && printf '#!/usr/bin/env bash\nsource /usr/lib/bashio/bashio.sh\n. "$@"\n' > /usr/bin/bashio \
+    && chmod +x /usr/bin/bashio \
     && apt-get purge -y --auto-remove curl \
     && rm -rf /var/lib/apt/lists/*
 
