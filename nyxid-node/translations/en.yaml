@@ -2,12 +2,9 @@ configuration:
   nyxid_server_url:
     name: "NyxID Server URL"
     description: "WebSocket URL of your NyxID server (e.g., wss://auth.example.com/api/v1/nodes/ws)"
-  registration_token:
-    name: "Registration Token"
-    description: "One-time registration token from NyxID. Only needed for first setup; ignored after successful registration."
   nyxid_access_token:
-    name: "NyxID Access Token"
-    description: "Your NyxID access token (from 'nyxid auth show-token'). Used once to auto-create the HA service on the server. Can be cleared after first successful start."
+    name: "NyxID API Key"
+    description: "Create one with: nyxid api-key create --name ha-addon --scopes 'read write' --allow-all-nodes --allow-all-services"
   node_name:
     name: "Node Name"
     description: "Display name for this node in logs"
