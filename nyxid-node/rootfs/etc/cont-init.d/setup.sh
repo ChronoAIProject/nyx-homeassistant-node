@@ -5,7 +5,6 @@
 
 NYXID_CONFIG="/data/nyxid-node"
 SERVICES_FILE="/data/configured-services.txt"
-HA_SLUG_FILE="/data/ha-service-slug"
 
 mkdir -p "${NYXID_CONFIG}"
 
@@ -14,13 +13,12 @@ api_base=$(echo "${server_url}" | sed 's|^wss://|https://|;s|^ws://|http://|;s|/
 access_token=$(bashio::config 'nyxid_access_token')
 
 # --------------------------------------------------------------------------
-# 1. Node registration (skip if config.toml has valid [node] section)
+# 1. Node registration (skip if already registered)
 # --------------------------------------------------------------------------
 if [ ! -f "${NYXID_CONFIG}/config.toml" ] || ! grep -q '\[node\]' "${NYXID_CONFIG}/config.toml" 2>/dev/null; then
 
     if bashio::var.is_empty "${access_token}"; then
         bashio::log.fatal "NyxID access token is required."
-        bashio::log.fatal "Create one: nyxid api-key create --name ha-addon --scopes 'read write' --allow-all-nodes --allow-all-services"
         exit 1
     fi
 
@@ -35,12 +33,11 @@ if [ ! -f "${NYXID_CONFIG}/config.toml" ] || ! grep -q '\[node\]' "${NYXID_CONFI
     reg_token=$(echo "${reg_response}" | jq -r '.token // empty')
 
     if [ -z "${reg_token}" ]; then
-        bashio::log.fatal "Failed to create registration token: ${reg_response}"
+        bashio::log.fatal "Failed to create registration token."
         exit 1
     fi
 
-    bashio::log.info "Registering node '${node_name}'..."
-
+    bashio::log.info "Registering node..."
     if ! nyxid node register \
         --token "${reg_token}" \
         --url "${server_url}" \
@@ -49,61 +46,49 @@ if [ ! -f "${NYXID_CONFIG}/config.toml" ] || ! grep -q '\[node\]' "${NYXID_CONFI
         exit 1
     fi
 
-    # Clear old service slug so it gets re-created for the new node
-    rm -f "${HA_SLUG_FILE}"
-    bashio::log.info "Node registered successfully."
+    node_id=$(grep '^id' "${NYXID_CONFIG}/config.toml" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+    bashio::log.info "Node registered: ${node_id}"
 fi
 
 # --------------------------------------------------------------------------
-# 2. Create HA service on NyxID server (skip if slug file exists)
+# 2. Determine HA service slug
 # --------------------------------------------------------------------------
-if [ ! -f "${HA_SLUG_FILE}" ]; then
+ha_slug=$(bashio::config 'ha_service_slug')
+node_id=$(grep '^id' "${NYXID_CONFIG}/config.toml" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
 
-    if bashio::var.is_empty "${access_token}"; then
-        bashio::log.warning "No access token — skipping service creation."
-        bashio::log.warning "Create the service manually: nyxid service add --custom --via-node <node_id>"
-        echo "homeassistant" > "${HA_SLUG_FILE}"
-    else
-        node_id=$(grep '^id' "${NYXID_CONFIG}/config.toml" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
-
-        bashio::log.info "Creating Home Assistant service on NyxID server..."
-
-        svc_output=$(printf 'Home Assistant\n' | nyxid service add --custom \
-            --via-node "${node_id}" \
-            --endpoint-url "http://supervisor/core/api" \
-            --auth-method none \
+if bashio::var.is_empty "${ha_slug}"; then
+    bashio::log.warning "============================================"
+    bashio::log.warning "No HA service slug configured."
+    bashio::log.warning "Run this on your machine to create one:"
+    bashio::log.warning ""
+    bashio::log.warning "  nyxid service add --custom \\"
+    bashio::log.warning "    --via-node ${node_id} \\"
+    bashio::log.warning "    --endpoint-url 'http://supervisor/core/api' \\"
+    bashio::log.warning "    --auth-method none"
+    bashio::log.warning ""
+    bashio::log.warning "Then paste the slug into the add-on config."
+    bashio::log.warning "============================================"
+else
+    # Bind the service to this node (idempotent)
+    if ! bashio::var.is_empty "${access_token}"; then
+        nyxid service update "${ha_slug}" \
+            --node-id "${node_id}" \
             --access-token "${access_token}" \
-            --base-url "${api_base}" \
-            2>&1)
-
-        ha_slug=$(echo "${svc_output}" | grep '^Slug:' | awk '{print $2}')
-
-        if [ -n "${ha_slug}" ]; then
-            echo "${ha_slug}" > "${HA_SLUG_FILE}"
-            bashio::log.info "HA service created: ${ha_slug}"
-        else
-            bashio::log.error "Failed to create HA service: ${svc_output}"
-            echo "homeassistant" > "${HA_SLUG_FILE}"
-        fi
+            --base-url "${api_base}" 2>/dev/null || true
     fi
+
+    # Update credential (every start — SUPERVISOR_TOKEN changes)
+    bashio::log.info "Updating Home Assistant credential (slug: ${ha_slug})..."
+    nyxid node credentials --config "${NYXID_CONFIG}" add \
+        --service "${ha_slug}" \
+        --header "Authorization" \
+        --secret-format bearer \
+        --value "${SUPERVISOR_TOKEN}" \
+        --url "http://supervisor/core/api"
 fi
 
-ha_slug=$(cat "${HA_SLUG_FILE}")
-
 # --------------------------------------------------------------------------
-# 3. Update Home Assistant credential (every start — token changes)
-# --------------------------------------------------------------------------
-bashio::log.info "Updating Home Assistant API credential (slug: ${ha_slug})..."
-
-nyxid node credentials --config "${NYXID_CONFIG}" add \
-    --service "${ha_slug}" \
-    --header "Authorization" \
-    --secret-format bearer \
-    --value "${SUPERVISOR_TOKEN}" \
-    --url "http://supervisor/core/api"
-
-# --------------------------------------------------------------------------
-# 4. Sync additional services from options
+# 3. Sync additional services from options
 # --------------------------------------------------------------------------
 desired_slugs="${ha_slug}"
 
@@ -134,7 +119,7 @@ for index in $(bashio::config 'services|keys'); do
 done
 
 # --------------------------------------------------------------------------
-# 5. Remove stale services
+# 4. Remove stale services
 # --------------------------------------------------------------------------
 if [ -f "${SERVICES_FILE}" ]; then
     while IFS= read -r old_slug; do
@@ -147,7 +132,7 @@ if [ -f "${SERVICES_FILE}" ]; then
             fi
         done
         if [ "${found}" = "false" ]; then
-            bashio::log.info "Removing stale service credential: ${old_slug}"
+            bashio::log.info "Removing stale credential: ${old_slug}"
             nyxid node credentials --config "${NYXID_CONFIG}" remove \
                 --service "${old_slug}" || true
         fi

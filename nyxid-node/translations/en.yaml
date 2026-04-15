@@ -1,31 +1,34 @@
 configuration:
   nyxid_server_url:
     name: "NyxID Server URL"
-    description: "WebSocket URL of your NyxID server (e.g., wss://auth.example.com/api/v1/nodes/ws)"
+    description: "WebSocket URL of your NyxID server"
   nyxid_access_token:
     name: "NyxID API Key"
-    description: "Create one with: nyxid api-key create --name ha-addon --scopes 'read write' --allow-all-nodes --allow-all-services"
+    description: "Create with: nyxid api-key create --name ha-addon --scopes 'read write' --allow-all-nodes --allow-all-services"
+  ha_service_slug:
+    name: "HA Service Slug"
+    description: "Service slug from 'nyxid service add'. Check add-on logs for the command to run."
   node_name:
     name: "Node Name"
-    description: "Display name for this node in logs"
+    description: "Display name for this node"
   log_level:
     name: "Log Level"
-    description: "Logging verbosity (debug, info, warn, error)"
+    description: "Logging verbosity"
   services:
     name: "Additional Services"
-    description: "LAN services to reverse-proxy (Home Assistant is auto-configured)"
+    description: "Extra LAN services to proxy (HA is auto-configured)"
     slug:
       name: "Service Slug"
-      description: "Unique identifier for this service (e.g., synology-nas)"
+      description: "Unique identifier (e.g., synology-nas)"
     target_url:
       name: "Target URL"
-      description: "URL of the downstream service (e.g., http://192.168.1.100:5000)"
+      description: "URL of the service (e.g., http://192.168.1.100:5000)"
     credential_type:
       name: "Credential Type"
-      description: "How to inject the credential: as an HTTP header or query parameter"
+      description: "Header or query parameter"
     credential_name:
       name: "Credential Name"
-      description: "Header name (e.g., Authorization) or query parameter name (e.g., api_key)"
+      description: "Header name or param name"
     credential_value:
       name: "Credential Value"
-      description: "The secret value to inject (e.g., Bearer token or API key)"
+      description: "The secret value"
