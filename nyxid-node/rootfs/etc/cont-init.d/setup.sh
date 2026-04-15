@@ -5,6 +5,7 @@
 
 NYXID_CONFIG="/data/nyxid-node"
 SERVICES_FILE="/data/configured-services.txt"
+HA_SLUG_FILE="/data/ha-service-slug"
 
 mkdir -p "${NYXID_CONFIG}"
 
@@ -42,9 +43,54 @@ if [ ! -f "${NYXID_CONFIG}/config.toml" ] || ! grep -q '\[node\]' "${NYXID_CONFI
 fi
 
 # --------------------------------------------------------------------------
-# 2. Determine desired service slugs
+# 2. Auto-create HA service on NyxID server (first run only)
 # --------------------------------------------------------------------------
-desired_slugs="homeassistant"
+if [ ! -f "${HA_SLUG_FILE}" ]; then
+    access_token=$(bashio::config 'nyxid_access_token')
+
+    if bashio::var.is_empty "${access_token}"; then
+        bashio::log.warning "No NyxID access token configured. Skipping auto-creation of HA service."
+        bashio::log.warning "Run 'nyxid service add --custom --via-node <node_id>' manually."
+    else
+        # Get the node ID from config
+        node_id=$(grep '^id' "${NYXID_CONFIG}/config.toml" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+
+        if [ -n "${node_id}" ]; then
+            bashio::log.info "Creating Home Assistant service on NyxID server..."
+
+            # Create service and capture the slug from output
+            service_output=$(printf 'Home Assistant\n' | nyxid service add --custom \
+                --via-node "${node_id}" \
+                --endpoint-url "http://supervisor/core/api" \
+                --auth-method none \
+                --access-token "${access_token}" \
+                2>&1)
+
+            ha_slug=$(echo "${service_output}" | grep '^Slug:' | awk '{print $2}')
+
+            if [ -n "${ha_slug}" ]; then
+                echo "${ha_slug}" > "${HA_SLUG_FILE}"
+                bashio::log.info "HA service created with slug: ${ha_slug}"
+            else
+                bashio::log.error "Failed to create HA service: ${service_output}"
+            fi
+        fi
+    fi
+fi
+
+# --------------------------------------------------------------------------
+# 3. Determine HA credential slug
+# --------------------------------------------------------------------------
+if [ -f "${HA_SLUG_FILE}" ]; then
+    ha_slug=$(cat "${HA_SLUG_FILE}")
+else
+    ha_slug="homeassistant"
+fi
+
+# --------------------------------------------------------------------------
+# 4. Determine desired service slugs
+# --------------------------------------------------------------------------
+desired_slugs="${ha_slug}"
 
 for index in $(bashio::config 'services|keys'); do
     slug=$(bashio::config "services[${index}].slug")
@@ -52,7 +98,7 @@ for index in $(bashio::config 'services|keys'); do
 done
 
 # --------------------------------------------------------------------------
-# 3. Remove stale services
+# 5. Remove stale services
 # --------------------------------------------------------------------------
 if [ -f "${SERVICES_FILE}" ]; then
     while IFS= read -r old_slug; do
@@ -73,19 +119,19 @@ if [ -f "${SERVICES_FILE}" ]; then
 fi
 
 # --------------------------------------------------------------------------
-# 4. Update Home Assistant built-in credential (every start)
+# 6. Update Home Assistant built-in credential (every start)
 # --------------------------------------------------------------------------
-bashio::log.info "Updating Home Assistant API credential..."
+bashio::log.info "Updating Home Assistant API credential (slug: ${ha_slug})..."
 
 nyxid node credentials --config "${NYXID_CONFIG}" add \
-    --service "homeassistant" \
+    --service "${ha_slug}" \
     --header "Authorization" \
     --secret-format bearer \
     --value "${SUPERVISOR_TOKEN}" \
     --url "http://supervisor/core/api"
 
 # --------------------------------------------------------------------------
-# 5. Sync additional services from options
+# 7. Sync additional services from options
 # --------------------------------------------------------------------------
 for index in $(bashio::config 'services|keys'); do
     slug=$(bashio::config "services[${index}].slug")
@@ -113,7 +159,7 @@ for index in $(bashio::config 'services|keys'); do
 done
 
 # --------------------------------------------------------------------------
-# 6. Save current service list for next-run diff
+# 8. Save current service list for next-run diff
 # --------------------------------------------------------------------------
 for slug in ${desired_slugs}; do
     echo "${slug}"

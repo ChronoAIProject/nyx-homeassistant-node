@@ -5,6 +5,9 @@ configuration:
   registration_token:
     name: "Registration Token"
     description: "One-time registration token from NyxID. Only needed for first setup; ignored after successful registration."
+  nyxid_access_token:
+    name: "NyxID Access Token"
+    description: "Your NyxID access token (from 'nyxid auth show-token'). Used once to auto-create the HA service on the server. Can be cleared after first successful start."
   node_name:
     name: "Node Name"
     description: "Display name for this node in logs"
