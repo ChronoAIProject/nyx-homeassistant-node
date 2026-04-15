@@ -2,6 +2,19 @@
 
 Run a [NyxID](https://github.com/ChronoAIProject/NyxID) credential node agent on Home Assistant OS. Securely reverse-proxy your Home Assistant instance and other LAN services through NyxID — credentials never leave your local network.
 
+## How It Works
+
+```
+External Client → NyxID Server → WebSocket → This Add-on → Local Services
+                                (outbound)    (credential    (HA, NAS, etc.)
+                                              injection)
+```
+
+1. The add-on connects to your NyxID server via outbound WebSocket (no inbound ports needed)
+2. When a proxy request arrives, the node agent injects the locally-stored credentials
+3. The request is forwarded to the target service on your LAN
+4. Credentials never leave your network — NyxID only sees the request metadata
+
 ## Installation
 
 1. In Home Assistant, go to **Settings → Add-ons → Add-on Store**
@@ -11,30 +24,62 @@ Run a [NyxID](https://github.com/ChronoAIProject/NyxID) credential node agent on
    ```
 3. Find **NyxID Node** in the store and click **Install**
 
-## Configuration
+## Setup
 
-### Required (first setup)
+### Step 1: Create the HA service (on your machine, one-time)
 
-| Option | Description |
-|--------|-------------|
-| `nyxid_server_url` | WebSocket URL of your NyxID server (e.g., `wss://auth.example.com/api/v1/nodes/ws`) |
-| `registration_token` | One-time registration token from NyxID (only needed for first start) |
+```bash
+nyxid service add --custom \
+  --label "Home Assistant" \
+  --endpoint-url "http://supervisor/core/api" \
+  --auth-method none
+```
 
-### Optional
+Note the **Slug** from the output (e.g., `home-assistant-xxxx`).
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `node_name` | `homeassistant` | Display name for this node in logs |
-| `log_level` | `info` | Logging verbosity: `debug`, `info`, `warn`, `error` |
-| `services` | `[]` | Additional LAN services to reverse-proxy (see below) |
+### Step 2: Create an API key (on your machine, one-time)
 
-### Home Assistant API
+```bash
+nyxid api-key create --name ha-addon \
+  --scopes "read write" \
+  --allow-all-nodes --allow-all-services
+```
 
-Home Assistant is **automatically configured** as a built-in service. The add-on uses the Supervisor API token — no manual setup required. Access it through NyxID with the service slug `homeassistant`.
+Note the **key** (starts with `nyx_`).
 
-### Additional Services
+### Step 3: Configure the Add-on
 
-To proxy other LAN services, add entries to the `services` list:
+In Home Assistant, go to **NyxID Node → Configuration** and fill in:
+
+| Field | Value |
+|-------|-------|
+| **NyxID API Key** | The `nyx_...` key from Step 2 |
+| **HA Service Slug** | The slug from Step 1 |
+
+Click **Save**, then **Start**.
+
+### Verify
+
+After starting, check the add-on logs. You should see:
+
+```
+Node registered successfully.
+Updating HA credential (slug: home-assistant-xxxx)...
+Setup complete.
+Starting NyxID node agent...
+Authenticated with NyxID server
+```
+
+Test from your machine:
+
+```bash
+nyxid proxy request home-assistant-xxxx "api/"
+# Should return: {"message":"API running."}
+```
+
+## Additional Services
+
+To proxy other LAN services, add entries to the `services` list in the add-on config:
 
 ```yaml
 services:
@@ -43,25 +88,7 @@ services:
     credential_type: header
     credential_name: Authorization
     credential_value: "Bearer your-token-here"
-  - slug: router-api
-    target_url: http://192.168.1.1/api
-    credential_type: query_param
-    credential_name: api_key
-    credential_value: "your-api-key"
 ```
-
-## How It Works
-
-```
-External Client → NyxID Server → WebSocket → This Add-on → Local Services
-                                (outbound)     (credential    (HA, NAS, etc.)
-                                               injection)
-```
-
-1. The add-on connects to your NyxID server via outbound WebSocket (no inbound ports needed)
-2. When a proxy request arrives, the node agent injects the locally-stored credentials
-3. The request is forwarded to the target service on your LAN
-4. Credentials never leave your network — NyxID only sees the request metadata
 
 ## Architecture
 
@@ -69,3 +96,4 @@ External Client → NyxID Server → WebSocket → This Add-on → Local Service
 - Persistent data stored in `/data/` (survives add-on updates)
 - Process managed by s6-overlay with automatic restart on crash
 - Node agent includes built-in WebSocket reconnection with exponential backoff
+- JWT session never leaves your machine — only a scoped API key is stored on HA
