@@ -59,33 +59,27 @@ if [ ! -f "${SETUP_DONE_FILE}" ]; then
         bashio::log.info "Node registered successfully."
     fi
 
-    # --- 1c. Create HA service with exact slug via API ---
+    # --- 1c. Create HA service via CLI (ensures proper user context) ---
     node_id=$(grep '^id' "${NYXID_CONFIG}/config.toml" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
-    ha_slug="homeassistant"
 
-    bashio::log.info "Creating Home Assistant service (slug: ${ha_slug})..."
+    bashio::log.info "Creating Home Assistant service on NyxID server..."
 
-    svc_response=$(curl -sf -X POST "${api_base}/api/v1/keys" \
-        -H "Authorization: Bearer ${access_token}" \
-        -H "Content-Type: application/json" \
-        -d "{
-            \"label\": \"Home Assistant\",
-            \"slug\": \"${ha_slug}\",
-            \"endpoint_url\": \"http://supervisor/core/api\",
-            \"auth_method\": \"none\",
-            \"auth_key_name\": \"Authorization\",
-            \"node_id\": \"${node_id}\"
-        }")
+    svc_output=$(printf 'Home Assistant\n' | nyxid service add --custom \
+        --via-node "${node_id}" \
+        --endpoint-url "http://supervisor/core/api" \
+        --auth-method none \
+        --access-token "${access_token}" \
+        --base-url "${api_base}" \
+        2>&1)
 
-    # Extract actual slug (may have -2, -3 suffix if "homeassistant" was taken)
-    actual_slug=$(echo "${svc_response}" | jq -r '.slug // empty')
+    ha_slug=$(echo "${svc_output}" | grep '^Slug:' | awk '{print $2}')
 
-    if [ -n "${actual_slug}" ]; then
-        echo "${actual_slug}" > "${HA_SLUG_FILE}"
-        bashio::log.info "HA service created: ${actual_slug}"
+    if [ -n "${ha_slug}" ]; then
+        echo "${ha_slug}" > "${HA_SLUG_FILE}"
+        bashio::log.info "HA service created: ${ha_slug}"
     else
-        bashio::log.error "Failed to create HA service: ${svc_response}"
-        bashio::log.warning "Falling back to slug: ${ha_slug}"
+        bashio::log.error "Failed to create HA service: ${svc_output}"
+        ha_slug="homeassistant"
         echo "${ha_slug}" > "${HA_SLUG_FILE}"
     fi
 
