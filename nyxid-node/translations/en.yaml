@@ -2,12 +2,12 @@ configuration:
   nyxid_server_url:
     name: "NyxID Server URL"
     description: "WebSocket URL of your NyxID server"
-  nyxid_access_token:
+  nyxid_api_key:
     name: "NyxID API Key"
     description: "Create with: nyxid api-key create --name ha-addon --scopes 'read write' --allow-all-nodes --allow-all-services"
   ha_service_slug:
     name: "HA Service Slug"
-    description: "Service slug from 'nyxid service add'. Check add-on logs for the command to run."
+    description: "Create with: nyxid service add --custom --label 'Home Assistant' --endpoint-url 'http://supervisor/core/api' --auth-method none"
   node_name:
     name: "Node Name"
     description: "Display name for this node"
