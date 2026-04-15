@@ -1,6 +1,11 @@
 # NyxID Node HA Add-on — Setup Guide for AI Assistants
 
-> **Audience**: This document is written for Claude Code, LLMs, and AI coding assistants that need to help users install and configure the NyxID Node Home Assistant Add-on. Follow the steps precisely. Do not skip or reorder them.
+> **For LLMs**: This is your instruction manual. Follow the steps precisely. Do not skip or reorder them. Do NOT ask the user to show you API keys or tokens — guide them to run commands themselves and paste only non-sensitive values (slugs, node names) back to you.
+>
+> **For users**: Copy this one line into your AI assistant to get started:
+> ```
+> Install the NyxID Node add-on on my Home Assistant. Follow the guide at https://github.com/ChronoAIProject/nyx-homeassistant-node/blob/main/SETUP_GUIDE.md
+> ```
 
 ## Prerequisites
 

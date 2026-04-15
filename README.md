@@ -2,6 +2,16 @@
 
 Run a [NyxID](https://github.com/ChronoAIProject/NyxID) credential node agent on Home Assistant OS. Securely reverse-proxy your Home Assistant instance and other LAN services through NyxID — credentials never leave your local network.
 
+## Quick Start — Give This to Your AI Assistant
+
+Copy this one line into Claude Code, Codex, Cursor, or any AI coding assistant:
+
+```
+Install the NyxID Node add-on on my Home Assistant. Follow the guide at https://github.com/ChronoAIProject/nyx-homeassistant-node/blob/main/SETUP_GUIDE.md
+```
+
+The AI will walk you through the setup step by step.
+
 ## How It Works
 
 ```
