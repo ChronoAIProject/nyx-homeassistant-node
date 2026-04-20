@@ -100,6 +100,52 @@ services:
     credential_value: "Bearer your-token-here"
 ```
 
+## Temporary admin mode — `NyxID Node (Admin)`
+
+The main add-on only has Core API access, so it cannot install/manage add-ons remotely. For that, install the sibling add-on **NyxID Node (Admin)** from the same repository *only when you need it*, then **uninstall** to fully revoke the elevated capability.
+
+### How it differs
+
+| | NyxID Node | NyxID Node (Admin) |
+|---|---|---|
+| `hassio_role` | (none) | **admin** |
+| `/api/*` (Core API) | ✅ | ✅ |
+| `/supervisor/*`, `/addons/*`, `/store/*` | ❌ 403 | ✅ |
+| `boot` | auto | **manual** |
+| Use case | always-on | install → use → uninstall |
+
+### Usage
+
+```bash
+# On your machine — one-time: register a Supervisor service slug
+nyxid service add --custom \
+  --label "HA Supervisor" \
+  --endpoint-url "http://supervisor" \
+  --auth-method none
+```
+
+In HA: install **NyxID Node (Admin)**, paste the slug into `Supervisor Service Slug`, start.
+
+Now you can drive the Supervisor API via NyxID:
+
+```bash
+# Add Frigate repository
+nyxid proxy request supervisor-xxxx "store/repositories" \
+  --method POST \
+  --body '{"repository":"https://github.com/blakeblackshear/frigate-hass-addons"}'
+
+# Install Frigate
+nyxid proxy request supervisor-xxxx \
+  "store/addons/blakeblackshear_frigate_hass-addons_frigate/install" \
+  --method POST
+```
+
+When done: **uninstall the admin add-on**. The container is destroyed, the `SUPERVISOR_TOKEN` is invalidated, and `hassio_role: admin` is no longer declared anywhere. Stopping (without uninstalling) also works but is weaker — the permission declaration stays on disk.
+
+### Security note
+
+`hassio_role: admin` grants root-equivalent control over your HA system. Anyone who obtains the NyxID API key while the admin add-on is running can install/remove any add-on, read `/data`, and modify Supervisor state. Keep the admin add-on uninstalled by default.
+
 ## Architecture
 
 - **amd64** and **aarch64** supported

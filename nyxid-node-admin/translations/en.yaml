@@ -1,0 +1,37 @@
+configuration:
+  nyxid_server_url:
+    name: "NyxID Server URL"
+    description: "WebSocket URL of your NyxID server"
+  nyxid_api_key:
+    name: "NyxID API Key"
+    description: "Same key you used for the main NyxID Node add-on"
+  ha_service_slug:
+    name: "HA Service Slug (optional)"
+    description: "Optional: bind a Core API slug here too. Leave empty if the main add-on already handles it."
+  supervisor_service_slug:
+    name: "Supervisor Service Slug"
+    description: "Create with: nyxid service add --custom --label 'HA Supervisor' --endpoint-url 'http://supervisor' --auth-method none"
+  node_name:
+    name: "Node Name"
+    description: "Display name for this admin node (distinct from the main node)"
+  log_level:
+    name: "Log Level"
+    description: "Logging verbosity"
+  services:
+    name: "Additional Services"
+    description: "Extra LAN services to proxy"
+    slug:
+      name: "Service Slug"
+      description: "Unique identifier"
+    target_url:
+      name: "Target URL"
+      description: "URL of the service"
+    credential_type:
+      name: "Credential Type"
+      description: "Header or query parameter"
+    credential_name:
+      name: "Credential Name"
+      description: "Header name or param name"
+    credential_value:
+      name: "Credential Value"
+      description: "The secret value"

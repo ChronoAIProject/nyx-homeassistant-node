@@ -1,0 +1,3 @@
+build_from:
+  amd64: "ghcr.io/chronoaiproject/nyx-homeassistant-node:1.0.0"
+  aarch64: "ghcr.io/chronoaiproject/nyx-homeassistant-node:1.0.0"
