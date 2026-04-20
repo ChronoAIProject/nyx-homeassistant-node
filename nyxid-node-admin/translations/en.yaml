@@ -5,12 +5,9 @@ configuration:
   nyxid_api_key:
     name: "NyxID API Key"
     description: "Same key you used for the main NyxID Node add-on"
-  ha_service_slug:
-    name: "HA Service Slug (optional)"
-    description: "Optional: bind a Core API slug here too. Leave empty if the main add-on already handles it."
-  supervisor_service_slug:
-    name: "Supervisor Service Slug"
-    description: "Create with: nyxid service add --custom --label 'HA Supervisor' --endpoint-url 'http://supervisor' --auth-method none"
+  supervisor_service_label:
+    name: "Supervisor Service Label"
+    description: "Display name for the NyxID service this add-on auto-provisions (default: HA Supervisor). The add-on creates + binds the service on first start; the slug is shown in the startup log."
   node_name:
     name: "Node Name"
     description: "Display name for this admin node (distinct from the main node)"

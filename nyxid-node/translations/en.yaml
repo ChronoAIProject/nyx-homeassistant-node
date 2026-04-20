@@ -5,9 +5,9 @@ configuration:
   nyxid_api_key:
     name: "NyxID API Key"
     description: "Create with: nyxid api-key create --name ha-addon --scopes 'read write' --allow-all-nodes --allow-all-services"
-  ha_service_slug:
-    name: "HA Service Slug"
-    description: "Create with: nyxid service add --custom --label 'Home Assistant' --endpoint-url 'http://supervisor/core/api' --auth-method none"
+  ha_service_label:
+    name: "HA Service Label"
+    description: "Display name for the NyxID service this add-on auto-provisions (default: Home Assistant). The add-on creates + binds the service on first start; the slug is shown in the startup log."
   node_name:
     name: "Node Name"
     description: "Display name for this node"

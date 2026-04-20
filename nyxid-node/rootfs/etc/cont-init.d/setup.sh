@@ -5,13 +5,13 @@
 
 NYXID_CONFIG="/data/nyxid-node"
 SERVICES_FILE="/data/configured-services.txt"
+HA_STATE_FILE="/data/ha-service-id"
 
 mkdir -p "${NYXID_CONFIG}"
 
 server_url=$(bashio::config 'nyxid_server_url')
 api_base=$(echo "${server_url}" | sed 's|^wss://|https://|;s|^ws://|http://|;s|/api/v1/nodes/ws$||')
 api_key=$(bashio::config 'nyxid_api_key')
-ha_slug=$(bashio::config 'ha_service_slug')
 
 # --------------------------------------------------------------------------
 # 1. Node registration (skip if already registered)
@@ -54,44 +54,109 @@ fi
 node_id=$(grep '^id' "${NYXID_CONFIG}/config.toml" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
 
 # --------------------------------------------------------------------------
-# 2. HA service binding + credential
+# 2. HA service — auto-provision (UUID-anchored)
 # --------------------------------------------------------------------------
-if bashio::var.is_empty "${ha_slug}"; then
-    bashio::log.warning "============================================"
-    bashio::log.warning "HA Service Slug is not configured."
-    bashio::log.warning ""
-    bashio::log.warning "Run on your machine:"
-    bashio::log.warning ""
-    bashio::log.warning "  nyxid service add --custom \\"
-    bashio::log.warning "    --via-node ${node_id} \\"
-    bashio::log.warning "    --endpoint-url 'http://supervisor/core/api' \\"
-    bashio::log.warning "    --auth-method none"
-    bashio::log.warning ""
-    bashio::log.warning "Then paste the slug into add-on config."
-    bashio::log.warning "============================================"
-else
-    # Bind service to this node (idempotent, silent on error)
-    if ! bashio::var.is_empty "${api_key}"; then
-        nyxid service update "${ha_slug}" \
-            --node-id "${node_id}" \
-            --access-token "${api_key}" \
-            --base-url "${api_base}" 2>/dev/null || true
-    fi
-
-    # Update credential (every start — SUPERVISOR_TOKEN changes)
-    bashio::log.info "Updating HA credential (slug: ${ha_slug})..."
-    nyxid node credentials --config "${NYXID_CONFIG}" add \
-        --service "${ha_slug}" \
-        --header "Authorization" \
-        --secret-format bearer \
-        --value "${SUPERVISOR_TOKEN}" \
-        --url "http://supervisor/core/api"
+if bashio::var.is_empty "${api_key}"; then
+    bashio::log.fatal "NyxID API key missing — cannot provision HA service."
+    exit 1
 fi
 
+label=$(bashio::config 'ha_service_label')
+if bashio::var.is_empty "${label}"; then
+    label="Home Assistant"
+fi
+
+# Legacy migration: first line of SERVICES_FILE historically held the ha_slug.
+if [ ! -f "${HA_STATE_FILE}" ] && [ -f "${SERVICES_FILE}" ]; then
+    legacy_slug=$(head -1 "${SERVICES_FILE}" 2>/dev/null)
+    if [ -n "${legacy_slug}" ]; then
+        bashio::log.info "Migrating legacy HA slug '${legacy_slug}' to UUID-anchored state..."
+        legacy_id=$(curl -sf -H "Authorization: Bearer ${api_key}" \
+            "${api_base}/api/v1/keys" \
+            | jq -r --arg s "${legacy_slug}" '.keys[] | select(.slug == $s) | .id' \
+            | head -1)
+        if [ -n "${legacy_id}" ]; then
+            echo "${legacy_id}" > "${HA_STATE_FILE}"
+            bashio::log.info "  Migrated to service id ${legacy_id}"
+        fi
+    fi
+fi
+
+# Try to reuse
+ha_service_id=""
+ha_slug=""
+if [ -f "${HA_STATE_FILE}" ]; then
+    saved_id=$(cat "${HA_STATE_FILE}")
+    resp=$(curl -sf -H "Authorization: Bearer ${api_key}" \
+        "${api_base}/api/v1/keys/${saved_id}" 2>/dev/null || echo "")
+    if [ -n "${resp}" ]; then
+        current_node=$(echo "${resp}" | jq -r '.node_id // empty')
+        current_label=$(echo "${resp}" | jq -r '.label // empty')
+        current_slug=$(echo "${resp}" | jq -r '.slug // empty')
+        current_ctype=$(echo "${resp}" | jq -r '.credential_type // empty')
+        if [ "${current_node}" = "${node_id}" ] && [ "${current_ctype}" = "node_managed" ]; then
+            ha_service_id="${saved_id}"
+            ha_slug="${current_slug}"
+            bashio::log.info "Reusing existing HA service: ${ha_slug} (id ${ha_service_id})"
+            if [ "${current_label}" != "${label}" ]; then
+                bashio::log.info "  Label changed: '${current_label}' → '${label}'"
+                curl -sf -X PUT -H "Authorization: Bearer ${api_key}" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"label\": \"${label}\"}" \
+                    "${api_base}/api/v1/keys/${ha_service_id}" >/dev/null || true
+            fi
+        else
+            bashio::log.warning "Saved HA service mismatch — recreating."
+            rm -f "${HA_STATE_FILE}"
+        fi
+    else
+        bashio::log.warning "Saved HA service id not found on server — recreating."
+        rm -f "${HA_STATE_FILE}"
+    fi
+fi
+
+# Create if needed (single POST with bearer + node_id — NyxID #419 workaround)
+if [ -z "${ha_service_id}" ]; then
+    bashio::log.info "Creating HA service '${label}'..."
+    create_resp=$(curl -sf -X POST \
+        -H "Authorization: Bearer ${api_key}" \
+        -H "Content-Type: application/json" \
+        -d "{
+            \"label\": \"${label}\",
+            \"key_type\": \"http\",
+            \"endpoint_url\": \"http://supervisor/core/api\",
+            \"auth_method\": \"bearer\",
+            \"auth_key_name\": \"Authorization\",
+            \"node_id\": \"${node_id}\"
+        }" \
+        "${api_base}/api/v1/keys")
+    if [ -z "${create_resp}" ]; then
+        bashio::log.fatal "Failed to create HA service (empty response)."
+        exit 1
+    fi
+    ha_service_id=$(echo "${create_resp}" | jq -r '.id // empty')
+    ha_slug=$(echo "${create_resp}" | jq -r '.slug // empty')
+    if [ -z "${ha_service_id}" ] || [ -z "${ha_slug}" ]; then
+        bashio::log.fatal "HA service creation response missing id or slug: ${create_resp}"
+        exit 1
+    fi
+    echo "${ha_service_id}" > "${HA_STATE_FILE}"
+    bashio::log.info "  Created: ${ha_slug} (id ${ha_service_id})"
+fi
+
+# Push SUPERVISOR_TOKEN credential (every start — token rotates)
+bashio::log.info "Pushing HA credential for ${ha_slug}..."
+nyxid node credentials --config "${NYXID_CONFIG}" add \
+    --service "${ha_slug}" \
+    --header "Authorization" \
+    --secret-format bearer \
+    --value "${SUPERVISOR_TOKEN}" \
+    --url "http://supervisor/core/api"
+
 # --------------------------------------------------------------------------
-# 3. Sync additional services
+# 3. Sync additional (user-defined) services
 # --------------------------------------------------------------------------
-desired_slugs="${ha_slug}"
+user_slugs=""
 
 for index in $(bashio::config 'services|keys'); do
     slug=$(bashio::config "services[${index}].slug")
@@ -100,7 +165,7 @@ for index in $(bashio::config 'services|keys'); do
     cred_name=$(bashio::config "services[${index}].credential_name")
     cred_value=$(bashio::config "services[${index}].credential_value")
 
-    desired_slugs="${desired_slugs} ${slug}"
+    user_slugs="${user_slugs} ${slug}"
     bashio::log.info "Configuring service: ${slug} → ${target_url}"
 
     if [ "${cred_type}" = "header" ]; then
@@ -120,13 +185,15 @@ for index in $(bashio::config 'services|keys'); do
 done
 
 # --------------------------------------------------------------------------
-# 4. Remove stale credentials
+# 4. Remove stale user-service credentials (HA slug is tracked separately)
 # --------------------------------------------------------------------------
 if [ -f "${SERVICES_FILE}" ]; then
     while IFS= read -r old_slug; do
         [ -z "${old_slug}" ] && continue
+        # Never touch the HA slug (it's tracked via HA_STATE_FILE)
+        [ "${old_slug}" = "${ha_slug}" ] && continue
         found=false
-        for desired in ${desired_slugs}; do
+        for desired in ${user_slugs}; do
             if [ "${desired}" = "${old_slug}" ]; then
                 found=true
                 break
@@ -140,8 +207,14 @@ if [ -f "${SERVICES_FILE}" ]; then
     done < "${SERVICES_FILE}"
 fi
 
-for slug in ${desired_slugs}; do
-    echo "${slug}"
-done > "${SERVICES_FILE}"
+# Track only user-defined slugs in SERVICES_FILE going forward
+: > "${SERVICES_FILE}"
+for slug in ${user_slugs}; do
+    echo "${slug}" >> "${SERVICES_FILE}"
+done
 
-bashio::log.info "Setup complete."
+bashio::log.warning "============================================"
+bashio::log.warning "Setup complete."
+bashio::log.warning "  HA service slug: ${ha_slug}"
+bashio::log.warning "  Call it with: nyxid proxy request ${ha_slug} states"
+bashio::log.warning "============================================"
