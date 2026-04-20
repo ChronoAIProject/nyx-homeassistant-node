@@ -1,6 +1,6 @@
 name: "NyxID Node (Admin)"
 description: "Temporary Supervisor admin proxy for NyxID — install when you need to manage Home Assistant add-ons remotely, uninstall to fully revoke"
-version: "1.1.1-alpha.1"
+version: "1.1.1-alpha.2"
 slug: "nyxid-node-admin"
 stage: "experimental"
 url: "https://github.com/ChronoAIProject/nyx-homeassistant-node"

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.2
+
+- Fix: inherited setup.sh in admin variant no longer misprovisions a `null` HA service. `bashio::config` returns the literal string `"null"` when the option key is missing, which wasn't caught by `is_empty`. Now treats missing/null/empty `ha_service_label` as "skip HA provision" — correct behavior for admin, unchanged for main (default label set).
+
 ## 1.1.1-alpha.1
 
 - **Auto-provisioning**: users no longer need to pre-create the HA service slug on their own machine. The add-on creates the service automatically on first start, using the `ha_service_label` field.

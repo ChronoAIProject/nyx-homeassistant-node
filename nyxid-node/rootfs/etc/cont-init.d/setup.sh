@@ -55,15 +55,19 @@ node_id=$(grep '^id' "${NYXID_CONFIG}/config.toml" | head -1 | sed 's/.*= *"\(.*
 
 # --------------------------------------------------------------------------
 # 2. HA service — auto-provision (UUID-anchored)
+#    Skipped entirely if ha_service_label is not configured (admin variant
+#    inherits this script but doesn't provision an HA Core service).
 # --------------------------------------------------------------------------
+label=$(bashio::config 'ha_service_label')
+# bashio returns the literal string "null" when the option key is missing
+if [ -z "${label}" ] || [ "${label}" = "null" ]; then
+    bashio::log.info "ha_service_label not set — skipping HA service provisioning."
+    ha_slug=""
+else
+
 if bashio::var.is_empty "${api_key}"; then
     bashio::log.fatal "NyxID API key missing — cannot provision HA service."
     exit 1
-fi
-
-label=$(bashio::config 'ha_service_label')
-if bashio::var.is_empty "${label}"; then
-    label="Home Assistant"
 fi
 
 # Legacy migration: first line of SERVICES_FILE historically held the ha_slug.
@@ -152,6 +156,8 @@ nyxid node credentials --config "${NYXID_CONFIG}" add \
     --secret-format bearer \
     --value "${SUPERVISOR_TOKEN}" \
     --url "http://supervisor/core/api"
+
+fi  # end of HA-service provisioning block
 
 # --------------------------------------------------------------------------
 # 3. Sync additional (user-defined) services

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.2
+
+- Pins to main image 1.1.1-alpha.2 which fixes the inherited-setup.sh null-HA-service bug.
+
 ## 1.1.1-alpha.1
 
 - **Auto-provisioning**: users no longer need to pre-create the Supervisor service slug. The add-on creates the service automatically on first start, using the `supervisor_service_label` field.
