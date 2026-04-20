@@ -397,3 +397,14 @@ nyxid node credentials add --config /path ...    # wrong!
 13. **Service slugs have random suffixes.** You cannot specify an exact slug through the CLI. The slug must be captured from the output and used as-is.
 
 14. **Proxy path is relative to endpoint_url.** If endpoint is `http://supervisor/core/api`, request path `states` becomes `/api/states`. Don't prefix with `api/` or you get `/api/api/states`.
+
+---
+
+## Further reading
+
+This document is chronological — how the project was built up to v1.0.0. For the **architectural reference** covering everything learned since (HA's real auth model, NyxID's service state machine, filed upstream issues and workarounds, the v1.1.1 provisioning design), see [docs/ARCHITECTURE_NOTES.md](docs/ARCHITECTURE_NOTES.md).
+
+That doc supersedes several items here — notably:
+
+- Section 9's "hassio admin API returns 401 with LLATs" is precise but incomplete; see ARCHITECTURE_NOTES § 1 for the actual `PATHS_ADMIN` whitelist mechanism and the WebSocket passthrough alternative.
+- Lesson 1's "API keys can't create proxy-visible services" was a wrong diagnosis; the real issue is the `credential_type: none` trap at POST time — see ARCHITECTURE_NOTES § 2 and [NyxID issue #419](https://github.com/ChronoAIProject/NyxID/issues/419).

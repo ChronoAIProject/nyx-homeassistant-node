@@ -12,6 +12,12 @@ Install the NyxID Node add-on on my Home Assistant. Follow the guide at https://
 
 The AI will walk you through the setup step by step.
 
+## Documentation
+
+- [SETUP_GUIDE.md](SETUP_GUIDE.md) — user-facing install + config walkthrough
+- [docs/ARCHITECTURE_NOTES.md](docs/ARCHITECTURE_NOTES.md) — **deep reference**: HA auth model, NyxID service lifecycle, filed upstream issues, and the full design rationale. **Read this before making architectural changes.**
+- [DEVELOPMENT.md](DEVELOPMENT.md) — chronological build history up to v1.0.0
+
 ## How It Works
 
 ```
