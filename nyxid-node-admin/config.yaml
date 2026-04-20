@@ -1,6 +1,6 @@
 name: "NyxID Node (Admin)"
 description: "Temporary Supervisor admin proxy for NyxID — install when you need to manage Home Assistant add-ons remotely, uninstall to fully revoke"
-version: "1.0.0"
+version: "1.1.1-alpha.1"
 slug: "nyxid-node-admin"
 url: "https://github.com/ChronoAIProject/nyx-homeassistant-node"
 startup: "application"
@@ -17,16 +17,14 @@ image: "ghcr.io/chronoaiproject/nyx-homeassistant-node-admin"
 options:
   nyxid_server_url: "wss://nyx-api.chrono-ai.fun/api/v1/nodes/ws"
   nyxid_api_key: ""
-  ha_service_slug: ""
-  supervisor_service_slug: ""
+  supervisor_service_label: "HA Supervisor"
   node_name: "homeassistant-admin"
   log_level: "info"
   services: []
 schema:
   nyxid_server_url: url
   nyxid_api_key: password
-  ha_service_slug: str?
-  supervisor_service_slug: str?
+  supervisor_service_label: str
   node_name: str
   log_level: "list(debug|info|warn|error)"
   services:
