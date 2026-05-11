@@ -1,6 +1,6 @@
-ARG NYXID_VERSION=0.5.2
+ARG NYXID_VERSION=0.5.3
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 ARG NYXID_VERSION
 ARG S6_OVERLAY_VERSION=3.2.0.2

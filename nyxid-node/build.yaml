@@ -2,4 +2,4 @@ build_from:
   amd64: "ghcr.io/home-assistant/amd64-base:3.21"
   aarch64: "ghcr.io/home-assistant/aarch64-base:3.21"
 args:
-  NYXID_VERSION: "0.5.2"
+  NYXID_VERSION: "0.5.3"

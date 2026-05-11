@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1-alpha.4
+
+- Bump bundled nyxid agent to 0.5.3 (picks up NyxID#696 — rustls `aws_lc_rs` `CryptoProvider` now installed at startup, so `nyxid node register` no longer panics on Linux GNU targets).
+- Move runtime base from `debian:bookworm-slim` (GLIBC 2.36) to `debian:trixie-slim` (GLIBC 2.40) so the public release binary's symbol requirements are satisfied.
+- End-to-end verified on a HAOS qemuarm-64 box: auto-provisioned service `home-assistant-haos`, `nyxid proxy request <slug> states` returns real entity data.
+
 ## 1.1.1-alpha.3
 
 - Bump bundled nyxid agent to 0.5.2.
