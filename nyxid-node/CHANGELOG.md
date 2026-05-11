@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1-alpha.3
+
+- Bump bundled nyxid agent to 0.5.2.
+- Switch Dockerfile to pull the nyxid binary from public `ChronoAIProject/NyxID` release tarballs at build time, dropping the dependency on the private `ghcr.io/chronoaiproject/nyxid/node-agent` base image.
+
 ## 1.1.1-alpha.2
 
 - Fix: inherited setup.sh in admin variant no longer misprovisions a `null` HA service. `bashio::config` returns the literal string `"null"` when the option key is missing, which wasn't caught by `is_empty`. Now treats missing/null/empty `ha_service_label` as "skip HA provision" — correct behavior for admin, unchanged for main (default label set).
