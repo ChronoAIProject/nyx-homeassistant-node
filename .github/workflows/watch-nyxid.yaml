@@ -1,0 +1,132 @@
+name: Watch NyxID releases
+
+on:
+  schedule:
+    # Daily at 07:17 UTC (~15:17 Asia/Shanghai). Off-the-hour to avoid GH cron contention.
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Bump add-on version and release even if NyxID is unchanged'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # push commit, create release
+  actions: write    # dispatch build.yaml after release
+
+jobs:
+  bump-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read latest upstream NyxID release
+        id: upstream
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag=$(gh api repos/ChronoAIProject/NyxID/releases/latest --jq .tag_name)
+          version="${tag#v}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Upstream latest: ${tag} (${version})"
+
+      - name: Read currently pinned NyxID version
+        id: current
+        run: |
+          current=$(grep '^ARG NYXID_VERSION=' nyxid-node/Dockerfile | head -1 | cut -d= -f2)
+          echo "version=${current}" >> "$GITHUB_OUTPUT"
+          echo "Pinned: ${current}"
+
+      - name: Decide whether to update
+        id: decide
+        env:
+          UPSTREAM: ${{ steps.upstream.outputs.version }}
+          PINNED: ${{ steps.current.outputs.version }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          if [ "${UPSTREAM}" = "${PINNED}" ] && [ "${FORCE}" != "true" ]; then
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+            echo "Up to date — nothing to do."
+          else
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+            echo "Will bump: NyxID ${PINNED} → ${UPSTREAM} (force=${FORCE})"
+          fi
+
+      - name: Compute next add-on version
+        if: steps.decide.outputs.needs_update == 'true'
+        id: addon
+        run: |
+          current=$(grep '^version:' nyxid-node/config.yaml | awk '{print $2}' | tr -d '"')
+          base="${current%%-*}"
+          suffix="${current#*-}"
+          if [ "$base" = "$current" ]; then
+            # No prerelease tail → start a fresh alpha series on the next patch
+            IFS=. read -r maj min pat <<< "$base"
+            new="${maj}.${min}.$((pat+1))-alpha.1"
+          else
+            pre_name="${suffix%.*}"
+            pre_num="${suffix##*.}"
+            new="${base}-${pre_name}.$((pre_num+1))"
+          fi
+          echo "new=${new}" >> "$GITHUB_OUTPUT"
+          echo "Add-on: ${current} → ${new}"
+
+      - name: Apply edits
+        if: steps.decide.outputs.needs_update == 'true'
+        env:
+          NEW_NYXID: ${{ steps.upstream.outputs.version }}
+          NEW_ADDON: ${{ steps.addon.outputs.new }}
+        run: |
+          set -euo pipefail
+          # 1. NyxID CLI version (Dockerfile arg + build.yaml build-arg)
+          sed -i "s/^ARG NYXID_VERSION=.*/ARG NYXID_VERSION=${NEW_NYXID}/" nyxid-node/Dockerfile
+          sed -i "s/NYXID_VERSION=[^[:space:]]*/NYXID_VERSION=${NEW_NYXID}/" .github/workflows/build.yaml
+          # 2. Both add-on versions
+          sed -i "s/^version: .*/version: \"${NEW_ADDON}\"/" nyxid-node/config.yaml
+          sed -i "s/^version: .*/version: \"${NEW_ADDON}\"/" nyxid-node-admin/config.yaml
+          # 3. Admin's BUILD_FROM tag must follow main
+          sed -i "s|nyx-homeassistant-node:[^\"]*|nyx-homeassistant-node:${NEW_ADDON}|g" nyxid-node-admin/build.yaml
+          # 4. Prepend CHANGELOG entries (keep the "# Changelog" header)
+          for f in nyxid-node/CHANGELOG.md nyxid-node-admin/CHANGELOG.md; do
+            {
+              printf '# Changelog\n\n## %s\n\n- Bump bundled nyxid agent to %s (auto-bumped by watch-nyxid workflow).\n' \
+                "${NEW_ADDON}" "${NEW_NYXID}"
+              tail -n +2 "$f"
+            } > "${f}.new"
+            mv "${f}.new" "$f"
+          done
+          echo "--- diff ---"
+          git diff --stat
+
+      - name: Commit, push, release, trigger build
+        if: steps.decide.outputs.needs_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_NYXID: ${{ steps.upstream.outputs.version }}
+          NEW_ADDON: ${{ steps.addon.outputs.new }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add nyxid-node/Dockerfile \
+                  .github/workflows/build.yaml \
+                  nyxid-node/config.yaml \
+                  nyxid-node-admin/config.yaml \
+                  nyxid-node-admin/build.yaml \
+                  nyxid-node/CHANGELOG.md \
+                  nyxid-node-admin/CHANGELOG.md
+          git commit -m "chore: bump NyxID to ${NEW_NYXID} (v${NEW_ADDON})
+
+Auto-bumped by .github/workflows/watch-nyxid.yaml."
+          git push origin HEAD:main
+
+          gh release create "v${NEW_ADDON}" \
+            --target main \
+            --prerelease \
+            --title "v${NEW_ADDON}" \
+            --notes "Auto-bumped to NyxID v${NEW_NYXID}. Build kicked off via workflow_dispatch (releases created by GITHUB_TOKEN do not trigger 'on: release' workflows)."
+
+          gh workflow run build.yaml --ref main
