@@ -118,9 +118,7 @@ jobs:
                   nyxid-node-admin/build.yaml \
                   nyxid-node/CHANGELOG.md \
                   nyxid-node-admin/CHANGELOG.md
-          git commit -m "chore: bump NyxID to ${NEW_NYXID} (v${NEW_ADDON})
-
-Auto-bumped by .github/workflows/watch-nyxid.yaml."
+          git commit -m "chore: bump NyxID to ${NEW_NYXID} (v${NEW_ADDON}) [auto via watch-nyxid]"
           git push origin HEAD:main
 
           gh release create "v${NEW_ADDON}" \
