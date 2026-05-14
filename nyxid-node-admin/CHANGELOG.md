@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.5
+
+- Bump bundled nyxid agent to 0.5.6 (auto-bumped by watch-nyxid workflow).
+
 ## 1.1.1-alpha.2
 
 - Pins to main image 1.1.1-alpha.2 which fixes the inherited-setup.sh null-HA-service bug.

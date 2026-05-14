@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.5
+
+- Bump bundled nyxid agent to 0.5.6 (auto-bumped by watch-nyxid workflow).
+
 ## 1.1.1-alpha.4
 
 - Bump bundled nyxid agent to 0.5.3 (picks up NyxID#696 — rustls `aws_lc_rs` `CryptoProvider` now installed at startup, so `nyxid node register` no longer panics on Linux GNU targets).
