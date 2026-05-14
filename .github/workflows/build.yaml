@@ -42,8 +42,6 @@ jobs:
           context: nyxid-node
           push: true
           platforms: linux/amd64,linux/arm64
-          build-args: |
-            NYXID_VERSION=0.5.3
           tags: |
             ghcr.io/chronoaiproject/nyx-homeassistant-node:${{ steps.version.outputs.version }}
             ghcr.io/chronoaiproject/nyx-homeassistant-node:latest

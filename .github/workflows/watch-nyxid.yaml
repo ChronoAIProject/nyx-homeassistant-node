@@ -81,9 +81,12 @@ jobs:
           NEW_ADDON: ${{ steps.addon.outputs.new }}
         run: |
           set -euo pipefail
-          # 1. NyxID CLI version (Dockerfile arg + build.yaml build-arg)
+          # 1. NyxID CLI version — Dockerfile's ARG default is the single source of truth.
+          # We intentionally do NOT touch .github/workflows/build.yaml: GITHUB_TOKEN
+          # cannot push changes to workflow files (refusing to allow a GitHub App
+          # to create or update workflow without 'workflows' permission), so the
+          # build-arg is dropped there and the Dockerfile default wins.
           sed -i "s/^ARG NYXID_VERSION=.*/ARG NYXID_VERSION=${NEW_NYXID}/" nyxid-node/Dockerfile
-          sed -i "s/NYXID_VERSION=[^[:space:]]*/NYXID_VERSION=${NEW_NYXID}/" .github/workflows/build.yaml
           # 2. Both add-on versions
           sed -i "s/^version: .*/version: \"${NEW_ADDON}\"/" nyxid-node/config.yaml
           sed -i "s/^version: .*/version: \"${NEW_ADDON}\"/" nyxid-node-admin/config.yaml
@@ -112,7 +115,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add nyxid-node/Dockerfile \
-                  .github/workflows/build.yaml \
                   nyxid-node/config.yaml \
                   nyxid-node-admin/config.yaml \
                   nyxid-node-admin/build.yaml \
