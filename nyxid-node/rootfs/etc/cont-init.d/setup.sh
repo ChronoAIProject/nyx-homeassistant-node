@@ -14,10 +14,9 @@ api_base=$(echo "${server_url}" | sed 's|^wss://|https://|;s|^ws://|http://|;s|/
 api_key=$(bashio::config 'nyxid_api_key')
 
 # --------------------------------------------------------------------------
-# 1. Node registration (skip if already registered)
+# 1. Node registration (skip if already registered AND still known upstream)
 # --------------------------------------------------------------------------
-if [ ! -f "${NYXID_CONFIG}/config.toml" ] || ! grep -q '\[node\]' "${NYXID_CONFIG}/config.toml" 2>/dev/null; then
-
+register_node() {
     if bashio::var.is_empty "${api_key}"; then
         bashio::log.fatal "NyxID API key is required."
         bashio::log.fatal "Create one: nyxid api-key create --name ha-addon --scopes 'read write' --allow-all-nodes --allow-all-services"
@@ -49,9 +48,32 @@ if [ ! -f "${NYXID_CONFIG}/config.toml" ] || ! grep -q '\[node\]' "${NYXID_CONFI
     fi
 
     bashio::log.info "Node registered successfully."
+}
+
+if [ ! -f "${NYXID_CONFIG}/config.toml" ] || ! grep -q '\[node\]' "${NYXID_CONFIG}/config.toml" 2>/dev/null; then
+    register_node
 fi
 
 node_id=$(grep '^id' "${NYXID_CONFIG}/config.toml" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+
+# Self-heal a stale registration (NyxID#1245): after a HAOS restore-from-backup
+# the restored config.toml still carries the OLD node id, while the server may
+# have a different (or no) record for it. Creating services against a stale
+# node id fails with NodeNotFound, so verify upstream and re-register if gone.
+if [ -n "${node_id}" ] && ! bashio::var.is_empty "${api_key}"; then
+    node_check_status=$(curl -s -o /dev/null -w '%{http_code}' \
+        -H "Authorization: Bearer ${api_key}" \
+        "${api_base}/api/v1/nodes/${node_id}" || echo "000")
+    if [ "${node_check_status}" = "404" ]; then
+        bashio::log.warning "Node ${node_id} no longer exists on the server (stale after a restore?) — re-registering."
+        mv "${NYXID_CONFIG}/config.toml" "${NYXID_CONFIG}/config.toml.stale" 2>/dev/null || true
+        register_node
+        node_id=$(grep '^id' "${NYXID_CONFIG}/config.toml" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+        bashio::log.info "Re-registered as node ${node_id}."
+    elif [ "${node_check_status}" != "200" ]; then
+        bashio::log.warning "Could not verify node ${node_id} upstream (HTTP ${node_check_status}); continuing."
+    fi
+fi
 
 # --------------------------------------------------------------------------
 # 2. HA service — auto-provision (UUID-anchored)
@@ -122,7 +144,7 @@ fi
 # Create if needed (single POST with bearer + node_id — NyxID #419 workaround)
 if [ -z "${ha_service_id}" ]; then
     bashio::log.info "Creating HA service '${label}'..."
-    create_resp=$(curl -sf -X POST \
+    create_raw=$(curl -s -w '\n%{http_code}' -X POST \
         -H "Authorization: Bearer ${api_key}" \
         -H "Content-Type: application/json" \
         -d "{
@@ -133,7 +155,15 @@ if [ -z "${ha_service_id}" ]; then
             \"auth_key_name\": \"Authorization\",
             \"node_id\": \"${node_id}\"
         }" \
-        "${api_base}/api/v1/keys")
+        "${api_base}/api/v1/keys" || echo "000")
+    create_status=$(echo "${create_raw}" | tail -n1)
+    create_resp=$(echo "${create_raw}" | sed '$d')
+    if [ "${create_status}" != "200" ] && [ "${create_status}" != "201" ]; then
+        # Surface the real error instead of a blind curl exit 22 (NyxID#1245).
+        bashio::log.fatal "Failed to create HA service: HTTP ${create_status} (node_id ${node_id})"
+        bashio::log.fatal "Response: ${create_resp}"
+        exit 1
+    fi
     if [ -z "${create_resp}" ]; then
         bashio::log.fatal "Failed to create HA service (empty response)."
         exit 1
