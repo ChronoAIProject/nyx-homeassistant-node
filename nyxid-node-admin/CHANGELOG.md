@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.11
+
+- Rebase on nyxid-node 1.1.1-alpha.11 (bundled agent actually 0.8.0 now; stale-node self-heal + surfaced service-creation errors — NyxID#1245).
+
 ## 1.1.1-alpha.10
 
 - Version bump to stay in lockstep with the main add-on (no functional change to the admin variant).

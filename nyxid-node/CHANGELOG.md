@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1-alpha.11
+
+- **Fix: bundled agent was stuck at 0.5.3** — `build.yaml` pinned `NYXID_VERSION: "0.5.3"`, which the HA builder passes as a build-arg and which overrode the Dockerfile default every auto-bump had been updating. The pin is removed so the Dockerfile `ARG NYXID_VERSION` (0.8.0) is the single source of truth. This restores remote credential injection (`nyxid node-credential inject` — the agent now answers the X25519 pubkey handshake) and all other post-0.5.3 agent features. (NyxID#1245 Bug 2)
+- **Fix: stale node registration self-heals after a HAOS restore-from-backup** — `setup.sh` now verifies the locally-stored node id against the server and re-registers when the server no longer knows it, instead of failing service creation with an invisible HTTP error. (NyxID#1245 Bug 1)
+- **Fix: service-creation errors are surfaced** — the create call logs the HTTP status and response body on failure instead of dying blind with `cont-init: ... exited 22`. (NyxID#1245 Bug 1)
+
 ## 1.1.1-alpha.10
 
 - Document exposing multiple HA identities via per-token NyxID services (closes #1). Now that NyxID #418/#414 have landed, users create a long-lived access token per HA identity (admin / bot / read-only) and add each as a `bearer` `--via-node` service pointing at this node — NyxID delivers the credential to the node over the WebSocket, so the token never touches the add-on config or `/data`.
