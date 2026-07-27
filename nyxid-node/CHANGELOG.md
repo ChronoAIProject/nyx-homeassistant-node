@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1-alpha.10
+
+- Document exposing multiple HA identities via per-token NyxID services (closes #1). Now that NyxID #418/#414 have landed, users create a long-lived access token per HA identity (admin / bot / read-only) and add each as a `bearer` `--via-node` service pointing at this node — NyxID delivers the credential to the node over the WebSocket, so the token never touches the add-on config or `/data`.
+- Setup log now prints the node name + id and a ready-to-run `nyxid service add` command for adding those identities.
+
 ## 1.1.1-alpha.9
 
 - Bump bundled nyxid agent to 0.8.0 (auto-bumped by watch-nyxid workflow).

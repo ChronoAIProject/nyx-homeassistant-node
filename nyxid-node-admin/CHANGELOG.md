@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.10
+
+- Version bump to stay in lockstep with the main add-on (no functional change to the admin variant).
+
 ## 1.1.1-alpha.9
 
 - Bump bundled nyxid agent to 0.8.0 (auto-bumped by watch-nyxid workflow).

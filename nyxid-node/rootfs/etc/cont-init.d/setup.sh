@@ -219,8 +219,18 @@ for slug in ${user_slugs}; do
     echo "${slug}" >> "${SERVICES_FILE}"
 done
 
+node_name=$(bashio::config 'node_name')
 bashio::log.warning "============================================"
 bashio::log.warning "Setup complete."
+bashio::log.warning "  Node: ${node_name} (id: ${node_id})"
 bashio::log.warning "  HA service slug: ${ha_slug}"
 bashio::log.warning "  Call it with: nyxid proxy request ${ha_slug} states"
+bashio::log.warning ""
+bashio::log.warning "  Expose more HA identities (admin / bot / read-only): create a"
+bashio::log.warning "  long-lived access token in HA, then add a bearer service on this"
+bashio::log.warning "  node from your machine —"
+bashio::log.warning "    nyxid service add --custom --label 'HA (Admin)' \\"
+bashio::log.warning "      --via-node ${node_id} \\"
+bashio::log.warning "      --endpoint-url http://homeassistant.local:8123 \\"
+bashio::log.warning "      --auth-method bearer --auth-key-name Authorization"
 bashio::log.warning "============================================"
