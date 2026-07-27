@@ -106,6 +106,51 @@ services:
     credential_value: "Bearer your-token-here"
 ```
 
+## Multiple HA identities (long-lived access tokens)
+
+The add-on auto-provisions **one** HA service, backed by its own non-admin
+service account. To reach Home Assistant under **additional identities** — an
+admin token for an AI that manages Lovelace, a scoped user for a light bot, a
+read-only user for dashboards — create a long-lived access token (LLAT) per
+identity and register each as its own NyxID service pointing at **this node**.
+No add-on restart or config edit is needed: NyxID delivers the credential to the
+node over the existing WebSocket, so the token never touches the add-on config
+or `/data` (NyxID [#418](https://github.com/ChronoAIProject/NyxID/issues/418)).
+
+1. **In Home Assistant**, create a user per identity
+   (**Settings → People → Users**), sign in as that user, and generate a token
+   under **Profile → Security → Long-lived access tokens**.
+
+2. **On your machine**, add one bearer service per token, bound to this node.
+   The add-on's startup log prints the node id to use here:
+
+   ```bash
+   nyxid service add --custom \
+     --label "HA (Admin)" \
+     --via-node <node-id> \
+     --endpoint-url "http://homeassistant.local:8123" \
+     --auth-method bearer \
+     --auth-key-name Authorization
+   ```
+
+   A browser wizard opens to paste the LLAT
+   (NyxID [#414](https://github.com/ChronoAIProject/NyxID/issues/414)); NyxID
+   pushes it to the node. Pass `--terminal` for shell instructions instead.
+
+3. **Call it** with the returned slug:
+
+   ```bash
+   nyxid proxy request ha-admin-xxxx "states"
+   ```
+
+Rotate or revoke one identity by deleting its LLAT in Home Assistant and its
+service in NyxID — the others are unaffected.
+
+> The `services` list above is the local-config alternative: it keeps the
+> credential in the add-on options, which is fine for **non-HA** LAN targets
+> (a NAS, a printer) but means one more place a secret lives. For HA identities,
+> prefer per-token NyxID services.
+
 ## Temporary admin mode — `NyxID Node (Admin)`
 
 The main add-on only has Core API access, so it cannot install/manage add-ons remotely. For that, install the sibling add-on **NyxID Node (Admin)** from the same repository *only when you need it*, then **uninstall** to fully revoke the elevated capability.
