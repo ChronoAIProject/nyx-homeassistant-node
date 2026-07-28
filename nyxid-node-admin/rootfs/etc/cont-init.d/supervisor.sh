@@ -34,8 +34,8 @@ bashio::log.info "Pushing SUPERVISOR_TOKEN to service '${slug}' on node ${node_i
 if nyxid node credentials --config "${NYXID_CONFIG}" add \
         --service "${slug}" \
         --header "Authorization" \
-        --secret-format bearer \
-        --value "${SUPERVISOR_TOKEN}" \
+        --secret-format raw \
+        --value "Bearer ${SUPERVISOR_TOKEN}" \
         --url "http://supervisor"; then
     bashio::log.warning "============================================"
     bashio::log.warning "SUPERVISOR ADMIN PROXY ACTIVE"
