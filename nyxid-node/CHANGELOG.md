@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.13
+
+- Version bump in lockstep with the admin add-on (`supervisor.sh` rewrite — node-local token push to a known slug, no `/api/v1/keys`). No functional change to the main add-on.
+
 ## 1.1.1-alpha.12
 
 - Version bump in lockstep with the admin add-on (`supervisor.sh` reuse-by-node fix). No functional change to the main add-on.
