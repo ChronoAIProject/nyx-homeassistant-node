@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.12
+
+- Version bump in lockstep with the admin add-on (`supervisor.sh` reuse-by-node fix). No functional change to the main add-on.
+
 ## 1.1.1-alpha.11
 
 - **Fix: bundled agent was stuck at 0.5.3** — `build.yaml` pinned `NYXID_VERSION: "0.5.3"`, which the HA builder passes as a build-arg and which overrode the Dockerfile default every auto-bump had been updating. The pin is removed so the Dockerfile `ARG NYXID_VERSION` (0.8.0) is the single source of truth. This restores remote credential injection (`nyxid node-credential inject` — the agent now answers the X25519 pubkey handshake) and all other post-0.5.3 agent features. (NyxID#1245 Bug 2)

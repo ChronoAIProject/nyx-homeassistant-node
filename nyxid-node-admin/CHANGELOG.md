@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.12
+
+- **Fix: `supervisor.sh` no longer dies with `exited 22` when it can't create the Supervisor service.** NyxID rejects service creation via API keys (403 / error_code 1002), so the create POST always failed and the blind `curl -sf` aborted the script before the credential was ever pushed → `ha-supervisor` returned 403 on every authenticated call. Now: (1) before creating, the add-on **adopts an existing node-managed `http://supervisor` service already bound to this node** — create it once as a user (`nyxid service add --custom --slug ha-supervisor --via-node <node> --endpoint-url http://supervisor --auth-method bearer`; add `--org <slug>` to scope it) and the add-on picks it up automatically, with no `/data` STATE_FILE seed; (2) the create call logs the HTTP status + body instead of crashing; (3) the `SUPERVISOR_TOKEN` credential push is guarded so a failed provision can't abort the run.
+
 ## 1.1.1-alpha.11
 
 - Rebase on nyxid-node 1.1.1-alpha.11 (bundled agent actually 0.8.0 now; stale-node self-heal + surfaced service-creation errors — NyxID#1245).
