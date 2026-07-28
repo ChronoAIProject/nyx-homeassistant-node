@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.13
+
+- **Fix: `supervisor.sh` still didn't work — NyxID rejects ALL `/api/v1/keys` access via API keys (403 / error_code 1002: create, list, AND get-by-id).** So alpha.12's "adopt by node" lookup (`GET /api/v1/keys`) also 1002'd, no credential was pushed, and `ha-supervisor` stayed 403. Rewritten to **never touch `/api/v1/keys`**: it pushes the container's `SUPERVISOR_TOKEN` straight to a **known slug** (new option `supervisor_service_slug`, default `ha-supervisor`) via node-local `nyxid node credentials add` — the only credential path API keys can use (same as the main add-on's `services[]`). Create the service once as a user, bound to this node: `nyxid service add --custom --slug ha-supervisor --via-node <node> --endpoint-url http://supervisor --auth-method bearer --auth-key-name Authorization --org <slug>` then `nyxid service update <id> --node-id <node>`. Replaces the now-unused `supervisor_service_label` option with `supervisor_service_slug`.
+
 ## 1.1.1-alpha.12
 
 - **Fix: `supervisor.sh` no longer dies with `exited 22` when it can't create the Supervisor service.** NyxID rejects service creation via API keys (403 / error_code 1002), so the create POST always failed and the blind `curl -sf` aborted the script before the credential was ever pushed → `ha-supervisor` returned 403 on every authenticated call. Now: (1) before creating, the add-on **adopts an existing node-managed `http://supervisor` service already bound to this node** — create it once as a user (`nyxid service add --custom --slug ha-supervisor --via-node <node> --endpoint-url http://supervisor --auth-method bearer`; add `--org <slug>` to scope it) and the add-on picks it up automatically, with no `/data` STATE_FILE seed; (2) the create call logs the HTTP status + body instead of crashing; (3) the `SUPERVISOR_TOKEN` credential push is guarded so a failed provision can't abort the run.
