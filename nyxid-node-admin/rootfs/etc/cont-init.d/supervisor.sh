@@ -83,13 +83,37 @@ if [ -f "${STATE_FILE}" ]; then
 fi
 
 # --------------------------------------------------------------------------
+# Fallback reuse: find an existing node-managed service already bound to THIS
+# node (endpoint http://supervisor) — e.g. one a *user* pre-created because
+# NyxID rejects service creation via API keys (403 / error_code 1002). Lets the
+# add-on adopt it automatically, with no /data STATE_FILE seed required.
+# --------------------------------------------------------------------------
+if [ -z "${service_id}" ]; then
+    listed=$(curl -sf -H "Authorization: Bearer ${api_key}" "${api_base}/api/v1/keys" 2>/dev/null || echo "")
+    if [ -n "${listed}" ]; then
+        match=$(echo "${listed}" | jq -r --arg n "${node_id}" \
+            '[((.keys // .)[]? | select(.node_id == $n and .credential_type == "node_managed" and ((.endpoint_url // "") | test("supervisor"))))][0] // {} | "\(.id // "")\t\(.slug // "")"')
+        found_id=$(printf '%s' "${match}" | cut -f1)
+        found_slug=$(printf '%s' "${match}" | cut -f2)
+        if [ -n "${found_id}" ] && [ "${found_id}" != "null" ]; then
+            service_id="${found_id}"
+            slug="${found_slug}"
+            echo "${service_id}" > "${STATE_FILE}"
+            bashio::log.info "Reusing existing Supervisor service found on this node: ${slug} (id ${service_id})"
+        fi
+    fi
+fi
+
+# --------------------------------------------------------------------------
 # Create fresh service if needed.
 # CRITICAL: auth_method + node_id MUST be in the initial POST.
 # POST-then-PUT leaves the service stuck in credential_type=none (NyxID #419).
 # --------------------------------------------------------------------------
 if [ -z "${service_id}" ]; then
     bashio::log.info "Creating Supervisor service '${label}'..."
-    create_resp=$(curl -sf -X POST \
+    # NOTE: no `curl -sf` here — a 4xx used to make the script die with
+    # `exited 22` and no diagnostics. Capture status + body and surface it.
+    create_raw=$(curl -s -w $'\n%{http_code}' -X POST \
         -H "Authorization: Bearer ${api_key}" \
         -H "Content-Type: application/json" \
         -d "{
@@ -101,34 +125,47 @@ if [ -z "${service_id}" ]; then
             \"node_id\": \"${node_id}\"
         }" \
         "${api_base}/api/v1/keys")
-    if [ -z "${create_resp}" ]; then
-        bashio::log.fatal "Failed to create Supervisor service (empty response)."
-        exit 1
+    create_code=$(printf '%s' "${create_raw}" | tail -n1)
+    create_body=$(printf '%s' "${create_raw}" | sed '$d')
+    if [ "${create_code}" = "200" ] || [ "${create_code}" = "201" ]; then
+        service_id=$(echo "${create_body}" | jq -r '.id // empty')
+        slug=$(echo "${create_body}" | jq -r '.slug // empty')
+        if [ -n "${service_id}" ] && [ -n "${slug}" ]; then
+            echo "${service_id}" > "${STATE_FILE}"
+            bashio::log.info "  Created: ${slug} (id ${service_id})"
+        fi
+    else
+        bashio::log.error "Could not create the Supervisor service (HTTP ${create_code}): ${create_body}"
+        if [ "${create_code}" = "403" ]; then
+            bashio::log.error "NyxID rejects service creation via API keys (error_code 1002)."
+        fi
+        bashio::log.error "Create it ONCE as a user, then restart this add-on (it will adopt it):"
+        bashio::log.error "  nyxid service add --custom --slug ha-supervisor --label '${label}' \\"
+        bashio::log.error "    --via-node ${node_id} --endpoint-url http://supervisor --auth-method bearer"
+        bashio::log.error "  (append --org <org-slug> to make it organisation-scoped)"
     fi
-    service_id=$(echo "${create_resp}" | jq -r '.id // empty')
-    slug=$(echo "${create_resp}" | jq -r '.slug // empty')
-    if [ -z "${service_id}" ] || [ -z "${slug}" ]; then
-        bashio::log.fatal "Service creation response missing id or slug: ${create_resp}"
-        exit 1
-    fi
-    echo "${service_id}" > "${STATE_FILE}"
-    bashio::log.info "  Created: ${slug} (id ${service_id})"
 fi
 
 # --------------------------------------------------------------------------
-# Push credential on this node (every start — SUPERVISOR_TOKEN rotates)
+# Push credential on this node (every start — SUPERVISOR_TOKEN rotates).
+# Only when a service is actually bound, so a failed provision doesn't crash.
 # --------------------------------------------------------------------------
-bashio::log.info "Pushing SUPERVISOR_TOKEN credential for ${slug}..."
-nyxid node credentials --config "${NYXID_CONFIG}" add \
-    --service "${slug}" \
-    --header "Authorization" \
-    --secret-format bearer \
-    --value "${SUPERVISOR_TOKEN}" \
-    --url "http://supervisor"
+if [ -n "${service_id}" ] && [ -n "${slug}" ]; then
+    bashio::log.info "Pushing SUPERVISOR_TOKEN credential for ${slug}..."
+    nyxid node credentials --config "${NYXID_CONFIG}" add \
+        --service "${slug}" \
+        --header "Authorization" \
+        --secret-format bearer \
+        --value "${SUPERVISOR_TOKEN}" \
+        --url "http://supervisor"
 
-bashio::log.warning "============================================"
-bashio::log.warning "SUPERVISOR ADMIN PROXY ACTIVE"
-bashio::log.warning "  Service slug: ${slug}"
-bashio::log.warning "  Call it with: nyxid proxy request ${slug} supervisor/info"
-bashio::log.warning "  UNINSTALL this add-on when you're done."
-bashio::log.warning "============================================"
+    bashio::log.warning "============================================"
+    bashio::log.warning "SUPERVISOR ADMIN PROXY ACTIVE"
+    bashio::log.warning "  Service slug: ${slug}"
+    bashio::log.warning "  Call it with: nyxid proxy request ${slug} supervisor/info"
+    bashio::log.warning "  UNINSTALL this add-on when you're done."
+    bashio::log.warning "============================================"
+else
+    bashio::log.warning "No Supervisor service bound to this node yet — credential not pushed."
+    bashio::log.warning "Follow the 'nyxid service add' instructions above, then restart this add-on."
+fi
