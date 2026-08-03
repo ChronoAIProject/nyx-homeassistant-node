@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.15
+
+- Bump bundled nyxid agent to 0.9.0 (auto-bumped by watch-nyxid workflow).
+
 ## 1.1.1-alpha.14
 
 - Version bump in lockstep with the admin add-on (`supervisor.sh` credential `--secret-format` fix). No functional change to the main add-on.

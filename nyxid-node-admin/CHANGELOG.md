@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.15
+
+- Bump bundled nyxid agent to 0.9.0 (auto-bumped by watch-nyxid workflow).
+
 ## 1.1.1-alpha.14
 
 - **Fix: push the SUPERVISOR_TOKEN with `--secret-format raw` (value `Bearer <token>`), not `--secret-format bearer`.** The `bearer` format registered the credential as `credential_type: node_managed`, which the proxy treats as "expects a server-stored credential" → `No credential stored` (HTTP 400) and the service wouldn't stay bound to the node. `--secret-format raw` with a `Bearer …` value keeps the service `credential_type: none` and lets the node inject the header locally — exactly how the main add-on's `services[]` credentials (e.g. `home-assistant`) work. Completes the alpha.12/alpha.13 fixes.
