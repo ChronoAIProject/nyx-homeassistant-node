@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.16
+
+- Bump bundled nyxid agent to 0.10.0 (auto-bumped by watch-nyxid workflow).
+
 ## 1.1.1-alpha.15
 
 - Bump bundled nyxid agent to 0.9.0 (auto-bumped by watch-nyxid workflow).
