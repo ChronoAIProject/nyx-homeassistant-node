@@ -1,0 +1,160 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Home Assistant REST API (office lights subset)",
+    "version": "1.0.0",
+    "description": "Minimal Home Assistant REST API surface for the Chrono office. Paths are relative to the NyxID service base URL, which already ends in /api."
+  },
+  "servers": [{ "url": "http://homeassistant.local:8123/api" }],
+  "tags": [{ "name": "home-assistant", "description": "Home Assistant core REST API" }],
+  "paths": {
+    "/config": {
+      "get": {
+        "operationId": "getConfig",
+        "summary": "Get Home Assistant core status and configuration",
+        "description": "Read-only. Returns version, state (RUNNING), location_name and time_zone.",
+        "tags": ["home-assistant"],
+        "responses": {
+          "200": {
+            "description": "Core configuration",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Config" } } }
+          }
+        }
+      }
+    },
+    "/states/{entity_id}": {
+      "get": {
+        "operationId": "getEntityState",
+        "summary": "Get the current state of one entity (light, switch, sensor)",
+        "description": "Read-only. entity_id looks like switch.dubai_room_back_light or light.office. The state field is on or off.",
+        "tags": ["home-assistant"],
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "description": "Entity id, for example switch.dubai_room_back_light",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entity state",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityState" } } }
+          },
+          "404": { "description": "Entity not found" }
+        }
+      }
+    },
+    "/services/switch/turn_on": {
+      "post": {
+        "operationId": "switchTurnOn",
+        "summary": "Turn ON one or more wall-switch lights (switch.* entities)",
+        "description": "Write. Use only for entity ids that start with switch. Returns the list of entities whose state changed.",
+        "tags": ["home-assistant"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceCall" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed entities",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityStateList" } } }
+          }
+        }
+      }
+    },
+    "/services/switch/turn_off": {
+      "post": {
+        "operationId": "switchTurnOff",
+        "summary": "Turn OFF one or more wall-switch lights (switch.* entities)",
+        "description": "Write. Use only for entity ids that start with switch. Returns the list of entities whose state changed.",
+        "tags": ["home-assistant"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceCall" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed entities",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityStateList" } } }
+          }
+        }
+      }
+    },
+    "/services/light/turn_on": {
+      "post": {
+        "operationId": "lightTurnOn",
+        "summary": "Turn ON one or more bulbs or light strips (light.* entities)",
+        "description": "Write. Use only for entity ids that start with light. Returns the list of entities whose state changed.",
+        "tags": ["home-assistant"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceCall" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed entities",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityStateList" } } }
+          }
+        }
+      }
+    },
+    "/services/light/turn_off": {
+      "post": {
+        "operationId": "lightTurnOff",
+        "summary": "Turn OFF one or more bulbs or light strips (light.* entities)",
+        "description": "Write. Use only for entity ids that start with light. Returns the list of entities whose state changed.",
+        "tags": ["home-assistant"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceCall" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed entities",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EntityStateList" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ServiceCall": {
+        "type": "object",
+        "required": ["entity_id"],
+        "properties": {
+          "entity_id": {
+            "type": "array",
+            "description": "One or more entity ids. Every id must belong to the domain of the operation (switch.* for switch operations, light.* for light operations).",
+            "items": { "type": "string" },
+            "minItems": 1
+          }
+        }
+      },
+      "EntityState": {
+        "type": "object",
+        "properties": {
+          "entity_id": { "type": "string" },
+          "state": { "type": "string", "description": "on or off for lights and switches" },
+          "last_changed": { "type": "string" },
+          "attributes": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "EntityStateList": {
+        "type": "array",
+        "items": { "$ref": "#/components/schemas/EntityState" }
+      },
+      "Config": {
+        "type": "object",
+        "properties": {
+          "version": { "type": "string" },
+          "state": { "type": "string" },
+          "location_name": { "type": "string" },
+          "time_zone": { "type": "string" }
+        }
+      }
+    }
+  }
+}
