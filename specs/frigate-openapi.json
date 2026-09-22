@@ -1,0 +1,336 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Frigate NVR API (office cameras subset)",
+    "version": "1.0.0",
+    "description": "Minimal Frigate REST API surface for the Chrono office cameras. Paths are relative to the NyxID service base URL, which is the Frigate host root, so every path starts with /api. Read-only."
+  },
+  "servers": [
+    {
+      "url": "http://10.0.1.6:5001"
+    }
+  ],
+  "paths": {
+    "/api/version": {
+      "get": {
+        "operationId": "getVersion",
+        "summary": "Check that Frigate is running and read its version",
+        "description": "Read-only. Returns the Frigate version as plain text, for example 0.17.2-3d4dd3a.",
+        "tags": [
+          "frigate"
+        ],
+        "responses": {
+          "200": {
+            "description": "Frigate version string",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "operationId": "getStats",
+        "summary": "Read per-camera health: frames per second, detection rate, and process state",
+        "description": "Read-only. The cameras object is keyed by camera name. A camera whose camera_fps is 0 is offline.",
+        "tags": [
+          "frigate"
+        ],
+        "responses": {
+          "200": {
+            "description": "Frigate stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "operationId": "listEvents",
+        "summary": "List recent detections (person, dog, cat) across cameras, newest first",
+        "description": "Read-only. Filter by camera and label. start_time and end_time are Unix seconds. has_snapshot tells whether getEventSnapshot will work for that event. Use this to answer questions like 'was anyone at reception in the last hour'.",
+        "tags": [
+          "frigate"
+        ],
+        "parameters": [
+          {
+            "name": "camera",
+            "in": "query",
+            "required": false,
+            "description": "Camera name. Omit for all cameras.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "lobby",
+                "reception_entrance",
+                "corridor",
+                "lounge",
+                "pantry",
+                "pantry_fridge",
+                "co_working_table_front_view",
+                "go2_front"
+              ]
+            }
+          },
+          {
+            "name": "label",
+            "in": "query",
+            "required": false,
+            "description": "Object label: person, dog, or cat. Omit for all labels.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "person",
+                "dog",
+                "cat"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of events to return. Default 10.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "description": "Only events that started after this Unix timestamp in seconds.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "description": "Only events that started before this Unix timestamp in seconds.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "has_snapshot",
+            "in": "query",
+            "required": false,
+            "description": "1 to return only events that have a snapshot.",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Event"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{event_id}": {
+      "get": {
+        "operationId": "getEvent",
+        "summary": "Read one detection event by id",
+        "description": "Read-only. Includes the score and, when Frigate has one, a text description of the event under data.description.",
+        "tags": [
+          "frigate"
+        ],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "description": "Event id from listEvents, for example 1790065617.33596-ntiis9",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Event not found"
+          }
+        }
+      }
+    },
+    "/api/{camera_name}/latest.jpg": {
+      "get": {
+        "operationId": "getCameraSnapshot",
+        "summary": "Get the latest frame from one camera as a JPEG image",
+        "description": "Read-only. Returns a binary JPEG. Camera names: lobby, reception_entrance, corridor, lounge, pantry, pantry_fridge, co_working_table_front_view, go2_front. Pass h to scale the image down.",
+        "tags": [
+          "frigate"
+        ],
+        "parameters": [
+          {
+            "name": "camera_name",
+            "in": "path",
+            "required": true,
+            "description": "Camera name, for example lobby",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "lobby",
+                "reception_entrance",
+                "corridor",
+                "lounge",
+                "pantry",
+                "pantry_fridge",
+                "co_working_table_front_view",
+                "go2_front"
+              ]
+            }
+          },
+          {
+            "name": "h",
+            "in": "query",
+            "required": false,
+            "description": "Output height in pixels. Width scales to keep the aspect ratio. 360 is a good default for chat.",
+            "schema": {
+              "type": "integer",
+              "minimum": 90,
+              "maximum": 1080
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JPEG image",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Camera not found"
+          }
+        }
+      }
+    },
+    "/api/events/{event_id}/snapshot.jpg": {
+      "get": {
+        "operationId": "getEventSnapshot",
+        "summary": "Get the snapshot JPEG for one detection event",
+        "description": "Read-only. Returns a binary JPEG of the best frame of the event. Only works when the event has has_snapshot true.",
+        "tags": [
+          "frigate"
+        ],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "description": "Event id from listEvents",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JPEG image",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Event or snapshot not found"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Event": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "camera": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "zones": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "start_time": {
+            "type": "number",
+            "description": "Unix seconds"
+          },
+          "end_time": {
+            "type": "number",
+            "nullable": true,
+            "description": "Unix seconds, null while the event is still active"
+          },
+          "has_clip": {
+            "type": "boolean"
+          },
+          "has_snapshot": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  }
+}
