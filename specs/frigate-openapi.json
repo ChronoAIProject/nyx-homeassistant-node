@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Frigate NVR API (office cameras subset)",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Minimal Frigate REST API surface for the Chrono office cameras. Paths are relative to the NyxID service base URL, which is the Frigate host root, so every path starts with /api. Read-only."
   },
   "servers": [
@@ -33,34 +33,11 @@
         }
       }
     },
-    "/api/stats": {
-      "get": {
-        "operationId": "getStats",
-        "summary": "Read per-camera health: frames per second, detection rate, and process state",
-        "description": "Read-only. The cameras object is keyed by camera name. A camera whose camera_fps is 0 is offline.",
-        "tags": [
-          "frigate"
-        ],
-        "responses": {
-          "200": {
-            "description": "Frigate stats",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/events": {
       "get": {
         "operationId": "listEvents",
         "summary": "List recent detections (person, dog, cat) across cameras, newest first",
-        "description": "Read-only. Filter by camera and label. start_time and end_time are Unix seconds. has_snapshot tells whether getEventSnapshot will work for that event. Use this to answer questions like 'was anyone at reception in the last hour'.",
+        "description": "Read-only. Filter by camera and label. Keep limit at 10 or below and pass include_thumbnails=0: the chat runtime rejects any result above 16 KB, and each event is about 1 KB. start_time and end_time are Unix seconds. has_snapshot tells whether getEventSnapshot will work for that event.",
         "tags": [
           "frigate"
         ],
@@ -102,11 +79,12 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "Maximum number of events to return. Default 10.",
+            "description": "Maximum number of events to return. Default 5. Never above 10 in a chat turn.",
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 50
+              "maximum": 10,
+              "default": 5
             }
           },
           {
@@ -138,6 +116,19 @@
                 0,
                 1
               ]
+            }
+          },
+          {
+            "name": "include_thumbnails",
+            "in": "query",
+            "required": false,
+            "description": "Always pass 0. A value of 1 embeds a base64 thumbnail in every event and makes the result too large for chat.",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                0
+              ],
+              "default": 0
             }
           }
         ],
@@ -174,6 +165,19 @@
             "description": "Event id from listEvents, for example 1790065617.33596-ntiis9",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "include_thumbnails",
+            "in": "query",
+            "required": false,
+            "description": "Always pass 0 to leave out the embedded base64 thumbnail.",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                0
+              ],
+              "default": 0
             }
           }
         ],
