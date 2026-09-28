@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Frigate NVR API (office cameras subset)",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Minimal Frigate REST API surface for the Chrono office cameras. Paths are relative to the NyxID service base URL, which is the Frigate host root, so every path starts with /api. Read-only."
   },
   "servers": [
@@ -37,7 +37,7 @@
       "get": {
         "operationId": "listEvents",
         "summary": "List recent detections (person, dog, cat) across cameras, newest first",
-        "description": "Read-only. Filter by camera and label. Keep limit at 10 or below and pass include_thumbnails=0: the chat runtime rejects any result above 16 KB, and each event is about 1 KB. start_time and end_time are Unix seconds. has_snapshot tells whether getEventSnapshot will work for that event.",
+        "description": "Read-only. Filter by camera and label. Pass include_thumbnails=0 and keep limit at 10 or below in a chat turn; each event is about 1 KB. start_time and end_time are Unix seconds. has_snapshot tells whether getEventSnapshot will work for that event.",
         "tags": [
           "frigate"
         ],
@@ -79,11 +79,9 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "Maximum number of events to return. Default 5. Never above 10 in a chat turn.",
+            "description": "Maximum number of events to return, 1 to 50. Default 5. Keep it at 10 or below in a chat turn.",
             "schema": {
               "type": "integer",
-              "minimum": 1,
-              "maximum": 10,
               "default": 5
             }
           },
@@ -230,11 +228,9 @@
             "name": "h",
             "in": "query",
             "required": false,
-            "description": "Output height in pixels. Width scales to keep the aspect ratio. 360 is a good default for chat.",
+            "description": "Output height in pixels, 90 to 1080. Width scales to keep the aspect ratio. 360 is a good default for chat.",
             "schema": {
-              "type": "integer",
-              "minimum": 90,
-              "maximum": 1080
+              "type": "integer"
             }
           }
         ],
