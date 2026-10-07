@@ -1,4 +1,4 @@
-ARG NYXID_VERSION=0.64.0
+ARG NYXID_VERSION=0.66.0
 
 FROM debian:trixie-slim
 
