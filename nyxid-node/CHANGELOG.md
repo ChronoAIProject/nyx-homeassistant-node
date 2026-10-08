@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.46
+
+- Fix credential refresh when `ha_service_slug` is configured; the node now pushes `SUPERVISOR_TOKEN` for both configured and auto-provisioned services.
+
 ## 1.1.1-alpha.45
 
 - Add optional `ha_service_slug` configuration for reusing an existing NyxID Home Assistant service.

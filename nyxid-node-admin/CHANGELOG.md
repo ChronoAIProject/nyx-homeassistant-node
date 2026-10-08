@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.46
+
+- Pins to the main add-on image 1.1.1-alpha.46, which fixes credential refresh for a configured existing Home Assistant service slug.
+
 ## 1.1.1-alpha.45
 
 - Pins to the main add-on image 1.1.1-alpha.45, which supports reusing an existing Home Assistant service slug.

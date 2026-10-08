@@ -184,16 +184,19 @@ if [ -z "${ha_service_id}" ]; then
     bashio::log.info "  Created: ${ha_slug} (id ${ha_service_id})"
 fi
 
-# Push SUPERVISOR_TOKEN credential (every start — token rotates)
-bashio::log.info "Pushing HA credential for ${ha_slug}..."
-nyxid node credentials --config "${NYXID_CONFIG}" add \
-    --service "${ha_slug}" \
-    --header "Authorization" \
-    --secret-format bearer \
-    --value "${SUPERVISOR_TOKEN}" \
-    --url "http://supervisor/core/api"
-
 fi  # end of HA-service provisioning block
+
+# Push SUPERVISOR_TOKEN credential for either a configured or auto-provisioned
+# service (every start — the token rotates across add-on restarts).
+if [ -n "${ha_slug}" ]; then
+    bashio::log.info "Pushing HA credential for ${ha_slug}..."
+    nyxid node credentials --config "${NYXID_CONFIG}" add \
+        --service "${ha_slug}" \
+        --header "Authorization" \
+        --secret-format bearer \
+        --value "${SUPERVISOR_TOKEN}" \
+        --url "http://supervisor/core/api"
+fi
 
 # --------------------------------------------------------------------------
 # 3. Sync additional (user-defined) services
