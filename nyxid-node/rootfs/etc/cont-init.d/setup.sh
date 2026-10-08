@@ -76,13 +76,19 @@ if [ -n "${node_id}" ] && ! bashio::var.is_empty "${api_key}"; then
 fi
 
 # --------------------------------------------------------------------------
-# 2. HA service — auto-provision (UUID-anchored)
-#    Skipped entirely if ha_service_label is not configured (admin variant
-#    inherits this script but doesn't provision an HA Core service).
+# 2. HA service — reuse configured slug or auto-provision (UUID-anchored)
+#    A configured ha_service_slug avoids service-management API calls. This is
+#    useful for API keys that can register nodes but cannot manage services.
+#    If no slug is configured, auto-provisioning is skipped when
+#    ha_service_label is unset (admin variant).
 # --------------------------------------------------------------------------
+configured_slug=$(bashio::config 'ha_service_slug')
 label=$(bashio::config 'ha_service_label')
-# bashio returns the literal string "null" when the option key is missing
-if [ -z "${label}" ] || [ "${label}" = "null" ]; then
+if [ -n "${configured_slug}" ] && [ "${configured_slug}" != "null" ]; then
+    ha_slug="${configured_slug}"
+    bashio::log.info "Using configured existing HA service: ${ha_slug}"
+elif [ -z "${label}" ] || [ "${label}" = "null" ]; then
+    # bashio returns the literal string "null" when the option key is missing
     bashio::log.info "ha_service_label not set — skipping HA service provisioning."
     ha_slug=""
 else

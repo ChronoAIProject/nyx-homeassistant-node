@@ -1,6 +1,6 @@
 name: "NyxID Node"
 description: "Run a NyxID credential node agent to securely reverse-proxy Home Assistant and LAN services through NyxID"
-version: "1.1.1-alpha.44"
+version: "1.1.1-alpha.45"
 slug: "nyxid-node"
 stage: "experimental"
 url: "https://github.com/ChronoAIProject/nyx-homeassistant-node"
@@ -17,6 +17,7 @@ options:
   nyxid_server_url: "wss://nyx-api.chrono-ai.fun/api/v1/nodes/ws"
   nyxid_api_key: ""
   ha_service_label: "Home Assistant"
+  ha_service_slug: ""
   node_name: "homeassistant"
   log_level: "info"
   services: []
@@ -24,6 +25,7 @@ schema:
   nyxid_server_url: url
   nyxid_api_key: password
   ha_service_label: str
+  ha_service_slug: str
   node_name: str
   log_level: "list(debug|info|warn|error)"
   services:

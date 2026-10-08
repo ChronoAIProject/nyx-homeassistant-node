@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1-alpha.45
+
+- Add optional `ha_service_slug` configuration for reusing an existing NyxID Home Assistant service.
+- When a slug is configured, skip service-management API calls and refresh only the node-local `SUPERVISOR_TOKEN` credential.
+
 ## 1.1.1-alpha.44
 
 - Bump bundled nyxid agent to 0.68.0 (auto-bumped by watch-nyxid workflow).

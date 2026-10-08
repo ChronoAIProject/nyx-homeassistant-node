@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.45
+
+- Pins to the main add-on image 1.1.1-alpha.45, which supports reusing an existing Home Assistant service slug.
+
 ## 1.1.1-alpha.44
 
 - Bump bundled nyxid agent to 0.68.0 (auto-bumped by watch-nyxid workflow).

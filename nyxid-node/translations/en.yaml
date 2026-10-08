@@ -8,6 +8,9 @@ configuration:
   ha_service_label:
     name: "HA Service Label"
     description: "Display name for the NyxID service this add-on auto-provisions (default: Home Assistant). The add-on creates + binds the service on first start; the slug is shown in the startup log."
+  ha_service_slug:
+    name: "Existing HA Service Slug"
+    description: "Optional existing NyxID service slug to reuse (for example, home-assistant-bzgm). When set, the add-on skips service management API calls and only refreshes the local Home Assistant credential."
   node_name:
     name: "Node Name"
     description: "Display name for this node"
