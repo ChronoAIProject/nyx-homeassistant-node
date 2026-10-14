@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.47
+
+- Bump bundled nyxid agent to 0.70.0 (auto-bumped by watch-nyxid workflow).
+
 ## 1.1.1-alpha.46
 
 - Fix credential refresh when `ha_service_slug` is configured; the node now pushes `SUPERVISOR_TOKEN` for both configured and auto-provisioned services.

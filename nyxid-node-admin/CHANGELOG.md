@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-alpha.47
+
+- Bump bundled nyxid agent to 0.70.0 (auto-bumped by watch-nyxid workflow).
+
 ## 1.1.1-alpha.46
 
 - Pins to the main add-on image 1.1.1-alpha.46, which fixes credential refresh for a configured existing Home Assistant service slug.
