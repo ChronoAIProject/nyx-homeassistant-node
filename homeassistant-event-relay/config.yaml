@@ -1,6 +1,6 @@
 name: "Home Assistant Event Relay"
 description: "Configurable Home Assistant Event Bus and MQTT event relay with a durable local outbox"
-version: "0.1.1"
+version: "0.1.2"
 slug: "homeassistant-event-relay"
 stage: "experimental"
 url: "https://github.com/ChronoAIProject/nyx-homeassistant-node"
@@ -35,6 +35,11 @@ schema:
       event_type_path: str
       event_type_prefix: str
       subject_path: str
+      heartbeat:
+        enabled: bool
+        interval_seconds: int
+        event_type: str
+        subject: str
       topics:
         - topic: str
           qos: "list(0|1|2)"

@@ -173,6 +173,8 @@ class MQTTSource(threading.Thread):
         self.relay = relay
         self.config = config
         self.client = None
+        self.connected = threading.Event()
+        self.heartbeat_thread = None
 
     def run(self) -> None:
         try:
@@ -202,10 +204,45 @@ class MQTTSource(threading.Thread):
             except Exception as exc:
                 LOG.warning("MQTT source %s unavailable: %s", self.config["id"], exc)
                 self.relay.stop_event.wait(5)
+            finally:
+                self.connected.clear()
 
     def stop(self) -> None:
+        self.connected.clear()
         if self.client is not None:
             self.client.disconnect()
+
+    def _emit_heartbeat(self, *, healthy: bool, resynced: bool) -> None:
+        heartbeat = self.config.get("heartbeat")
+        if not isinstance(heartbeat, dict) or not heartbeat.get("enabled", False):
+            return
+        data = heartbeat.get("data", {"healthy": healthy, "resynced": resynced})
+        if not isinstance(data, dict):
+            LOG.warning("MQTT source %s heartbeat data must be an object", self.config["id"])
+            return
+        data = dict(data)
+        data["healthy"] = healthy
+        data["resynced"] = resynced
+        # Each periodic heartbeat must have a fresh identity; otherwise the
+        # durable outbox would correctly deduplicate every heartbeat after the
+        # first one and the downstream quiet-window timer would go stale.
+        data["observed_at"] = time.time()
+        event = cloud_event(
+            self.config["id"],
+            data,
+            source_kind="mqtt",
+            event_type=str(heartbeat.get("event_type", "frigate.bridge.heartbeat")),
+            subject=str(heartbeat.get("subject")) if heartbeat.get("subject") else None,
+            source_override=self.config.get("source_uri") or None,
+        )
+        self.relay.accept(self.config["id"], event)
+
+    def _heartbeat_loop(self) -> None:
+        heartbeat = self.config.get("heartbeat")
+        interval = max(5.0, float(heartbeat.get("interval_seconds", 30))) if isinstance(heartbeat, dict) else 30.0
+        while not self.relay.stop_event.wait(interval):
+            if self.connected.is_set():
+                self._emit_heartbeat(healthy=True, resynced=True)
 
     def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         if getattr(reason_code, "is_failure", False):
@@ -215,9 +252,17 @@ class MQTTSource(threading.Thread):
             topic = item.get("topic") if isinstance(item, dict) else item
             qos = int(item.get("qos", 1)) if isinstance(item, dict) else 1
             client.subscribe(topic, qos=qos)
+        self.connected.set()
+        self._emit_heartbeat(healthy=True, resynced=True)
+        if isinstance(self.config.get("heartbeat"), dict) and self.config["heartbeat"].get("enabled", False):
+            if self.heartbeat_thread is None or not self.heartbeat_thread.is_alive():
+                self.heartbeat_thread = threading.Thread(target=self._heartbeat_loop, name=f"heartbeat:{self.config['id']}", daemon=True)
+                self.heartbeat_thread.start()
         LOG.info("MQTT source %s connected", self.config["id"])
 
     def _on_disconnect(self, client, userdata, flags, reason_code, properties=None):
+        self.connected.clear()
+        self._emit_heartbeat(healthy=False, resynced=False)
         LOG.warning("MQTT source %s disconnected: %s", self.config["id"], reason_code)
 
     def _on_message(self, client, userdata, message):
