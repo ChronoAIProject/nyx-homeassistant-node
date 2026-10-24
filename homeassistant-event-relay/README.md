@@ -49,9 +49,14 @@ routes:
   - id: frigate_reviews
     source: frigate
     destination: cloud_ingest
+    event_types: []
     topics:
       - frigate/reviews
+    subjects: []
+    json_equals: []
+    redact_paths: []
     max_payload_bytes: 262144
+    max_per_minute: 0
 
   - id: selected_states
     source: ha_state
@@ -60,8 +65,11 @@ routes:
       - homeassistant.state_changed
     subjects:
       - sensor.example
+    topics: []
+    json_equals: []
     redact_paths:
       - new_state.attributes
+    max_payload_bytes: 262144
     max_per_minute: 60
 ```
 
