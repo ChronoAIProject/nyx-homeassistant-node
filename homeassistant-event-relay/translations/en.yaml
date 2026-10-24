@@ -1,0 +1,82 @@
+configuration:
+  log_level:
+    name: "Log level"
+    description: "The relay never logs credentials or event bodies."
+  queue_max_items:
+    name: "Maximum queued events"
+    description: "Maximum number of unsent events retained in the local outbox."
+  http_timeout_seconds:
+    name: "HTTP timeout"
+    description: "Timeout for one HTTPS delivery attempt."
+  mqtt_sources:
+    name: "MQTT sources"
+    description: "MQTT brokers and topics to subscribe to."
+    id:
+      name: "Source ID"
+    host:
+      name: "Broker host"
+    port:
+      name: "Broker port"
+    username:
+      name: "Username"
+    password:
+      name: "Password"
+    tls:
+      name: "Use TLS"
+    event_type_path:
+      name: "Event type JSON path"
+    event_type_prefix:
+      name: "Event type prefix"
+    subject_path:
+      name: "Subject JSON path"
+    topics:
+      name: "Topics"
+      topic:
+        name: "Topic"
+      qos:
+        name: "QoS"
+  ha_sources:
+    name: "Home Assistant event sources"
+    description: "Event types are explicit; an empty list is rejected."
+    id:
+      name: "Source ID"
+    event_types:
+      name: "Event types"
+  destinations:
+    name: "HTTPS destinations"
+    description: "Only HTTPS destinations are accepted."
+    id:
+      name: "Destination ID"
+    url:
+      name: "HTTPS URL"
+    auth_type:
+      name: "Authentication"
+    auth_token:
+      name: "Bearer token"
+  routes:
+    name: "Event routes"
+    description: "No route means no event leaves Home Assistant."
+    id:
+      name: "Route ID"
+    source:
+      name: "Source ID"
+    destination:
+      name: "Destination ID"
+    event_types:
+      name: "Event type filters"
+    topics:
+      name: "MQTT topic filters"
+    subjects:
+      name: "Subject filters"
+    json_equals:
+      name: "JSON equality filters"
+      path:
+        name: "JSON path"
+      value:
+        name: "Expected value"
+    redact_paths:
+      name: "Redact paths"
+    max_payload_bytes:
+      name: "Maximum payload bytes"
+    max_per_minute:
+      name: "Maximum events per minute"

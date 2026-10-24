@@ -1,0 +1,65 @@
+name: "Home Assistant Event Relay"
+description: "Configurable Home Assistant Event Bus and MQTT event relay with a durable local outbox"
+version: "0.1.0"
+slug: "homeassistant-event-relay"
+stage: "experimental"
+url: "https://github.com/ChronoAIProject/nyx-homeassistant-node"
+startup: "services"
+boot: "auto"
+arch:
+  - amd64
+  - aarch64
+homeassistant_api: true
+init: false
+image: "ghcr.io/chronoaiproject/nyx-homeassistant-event-relay"
+options:
+  log_level: "info"
+  queue_max_items: 10000
+  http_timeout_seconds: 15
+  mqtt_sources: []
+  ha_sources: []
+  destinations: []
+  routes: []
+schema:
+  log_level: "list(debug|info|warn|error)"
+  queue_max_items: int
+  http_timeout_seconds: int
+  mqtt_sources:
+    - id: str
+      host: str
+      port: port
+      username: str
+      password: password
+      tls: bool
+      event_type_path: str
+      event_type_prefix: str
+      subject_path: str
+      topics:
+        - topic: str
+          qos: "list(0|1|2)"
+  ha_sources:
+    - id: str
+      event_types:
+        - str
+  destinations:
+    - id: str
+      url: url
+      auth_type: "list(none|bearer)"
+      auth_token: password
+  routes:
+    - id: str
+      source: str
+      destination: str
+      event_types:
+        - str
+      topics:
+        - str
+      subjects:
+        - str
+      json_equals:
+        - path: str
+          value: str
+      redact_paths:
+        - str
+      max_payload_bytes: int
+      max_per_minute: int

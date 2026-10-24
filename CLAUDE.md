@@ -1,6 +1,9 @@
 # CLAUDE.md — project guide for AI assistants
 
-This repo ships two Home Assistant add-ons that bridge HA to NyxID. Before making changes, skim this file top to bottom — it captures the non-obvious bits that cost the last session hours to re-discover.
+This repo ships two Home Assistant add-ons that bridge HA to NyxID, plus an
+independent opt-in event relay. Before making changes, skim this file top to
+bottom — it captures the non-obvious bits that cost the last session hours to
+re-discover.
 
 For the full narrative / deeper architecture, see [`docs/ARCHITECTURE_NOTES.md`](docs/ARCHITECTURE_NOTES.md). This file is the quick reference.
 
@@ -10,6 +13,7 @@ For the full narrative / deeper architecture, see [`docs/ARCHITECTURE_NOTES.md`]
 |---|---|---|
 | `nyxid-node/` | `homeassistant_api: true` — HA Core REST only | Always installed. Main pipe between NyxID and HA. |
 | `nyxid-node-admin/` | adds `hassio_api: true` + `hassio_role: admin` | Temporary. Install only when you need Supervisor-level ops (install add-ons, manage host). **Uninstalling = physical revocation** of admin capability. |
+| homeassistant-event-relay/ | homeassistant_api: true — selected HA Event Bus and MQTT sources | Optional. Explicit routes only; persists an outbound HTTPS outbox in /data. |
 
 Both auto-provision their NyxID service on first start as of v1.1.1. User fills API key + label, add-on creates + binds + pushes credential.
 

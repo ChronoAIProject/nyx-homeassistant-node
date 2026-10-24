@@ -1,0 +1,23 @@
+name: Test event relay
+
+on:
+  push:
+    paths:
+      - "homeassistant-event-relay/**"
+      - ".github/workflows/test-event-relay.yaml"
+  pull_request:
+    paths:
+      - "homeassistant-event-relay/**"
+      - ".github/workflows/test-event-relay.yaml"
+  workflow_dispatch:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s homeassistant-event-relay/tests -v
+      - run: python -m py_compile homeassistant-event-relay/app/*.py
