@@ -95,6 +95,16 @@ relay token, performs aggregation and sends only the final candidate event to a
 CMA custom channel. Keeping the CMA HMAC secret in the cloud service means the
 HA relay cannot forge CMA events.
 
-The first version forwards metadata only. It does not fetch Frigate images or
-invoke a model. A later bounded image selector can be added without changing
-the MQTT or HA event routing contract.
+The relay forwards metadata only. Image selection and model work belong to the
+downstream application.
+
+## End-to-end application example
+
+The [dining review reference application](https://github.com/ChronoAIProject/frigate-cma-events/tree/main/examples/dining)
+connects this relay to deterministic cloud aggregation, a bounded historical
+image endpoint, a CMA visual worker and Google Sheets. Its templates include a
+camera-filtered relay configuration and the matching cloud/worker/channel/Sheet
+parameters. Actual camera identifiers, accounts and credentials are filled in
+private installation files outside the repositories. The scene-specific rules
+and worker prompt are maintained with that application; this add-on provides
+the reusable event transport.

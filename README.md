@@ -17,6 +17,8 @@ The AI will walk you through the setup step by step.
 - [SETUP_GUIDE.md](SETUP_GUIDE.md) — user-facing install + config walkthrough
 - [docs/ARCHITECTURE_NOTES.md](docs/ARCHITECTURE_NOTES.md) — **deep reference**: HA auth model, NyxID service lifecycle, filed upstream issues, and the full design rationale. **Read this before making architectural changes.**
 - [DEVELOPMENT.md](DEVELOPMENT.md) — chronological build history up to v1.0.0
+- [Home Assistant Event Relay](homeassistant-event-relay/README.md) — configurable MQTT/Event Bus forwarding with a durable local outbox
+- [Dining review reference application](https://github.com/ChronoAIProject/frigate-cma-events/tree/main/examples/dining) — complete Frigate → relay → CMA visual worker → Google Sheets example, with private deployment parameters
 
 ## How It Works
 
