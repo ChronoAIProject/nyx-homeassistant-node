@@ -23,6 +23,8 @@ configuration:
       name: "Password"
     tls:
       name: "Use TLS"
+    source_uri:
+      name: "CloudEvent source URI"
     event_type_path:
       name: "Event type JSON path"
     event_type_prefix:

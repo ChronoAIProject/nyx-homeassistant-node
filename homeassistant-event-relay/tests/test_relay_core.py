@@ -23,6 +23,10 @@ class RelayCoreTests(unittest.TestCase):
         payload = {"type": "end", "after": {"id": "review"}}
         self.assertEqual(stable_event_id("frigate", payload, topic="frigate/reviews"), stable_event_id("frigate", payload, topic="frigate/reviews"))
 
+    def test_source_uri_can_be_configured(self):
+        event = cloud_event("mqtt", {"value": 1}, source_kind="mqtt", source_override="urn:frigate:home")
+        self.assertEqual(event["source"], "urn:frigate:home")
+
     def test_mqtt_wildcards(self):
         self.assertTrue(mqtt_topic_matches("frigate/#", "frigate/reviews"))
         self.assertTrue(mqtt_topic_matches("frigate/+/snapshot", "frigate/camera/snapshot"))

@@ -42,6 +42,7 @@ def cloud_event(
     subject: str | None = None,
     event_id: str | None = None,
     occurred_at: str | None = None,
+    source_override: str | None = None,
 ) -> dict[str, Any]:
     """Wrap one source message in a CloudEvents 1.0 JSON envelope."""
 
@@ -49,7 +50,7 @@ def cloud_event(
         raise ConfigurationError("source id cannot be empty")
     event = {
         "specversion": "1.0",
-        "source": f"urn:homeassistant:{source_kind}:{source_id}",
+        "source": source_override or f"urn:homeassistant:{source_kind}:{source_id}",
         "id": event_id or stable_event_id(source_id, payload, topic=topic),
         "type": event_type or f"homeassistant.{source_kind}",
         "datacontenttype": "application/json",

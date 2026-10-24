@@ -27,6 +27,7 @@ mqtt_sources:
     username: relay_user
     password: <configured-in-HA>
     tls: false
+    source_uri: urn:frigate:home
     event_type_path: type
     event_type_prefix: frigate.review.
     subject_path: after.camera

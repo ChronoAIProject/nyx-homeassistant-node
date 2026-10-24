@@ -236,6 +236,7 @@ class MQTTSource(threading.Thread):
             topic=message.topic,
             event_type=f"{prefix}{event_type}" if event_type else "mqtt.message",
             subject=str(subject) if subject is not None else None,
+            source_override=self.config.get("source_uri") or None,
         )
         self.relay.accept(self.config["id"], event, topic=message.topic)
 
