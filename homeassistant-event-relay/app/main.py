@@ -242,7 +242,7 @@ class MQTTSource(threading.Thread):
         interval = max(5.0, float(heartbeat.get("interval_seconds", 30))) if isinstance(heartbeat, dict) else 30.0
         while not self.relay.stop_event.wait(interval):
             if self.connected.is_set():
-                self._emit_heartbeat(healthy=True, resynced=True)
+                self._emit_heartbeat(healthy=True, resynced=False)
 
     def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         if getattr(reason_code, "is_failure", False):
@@ -253,7 +253,9 @@ class MQTTSource(threading.Thread):
             qos = int(item.get("qos", 1)) if isinstance(item, dict) else 1
             client.subscribe(topic, qos=qos)
         self.connected.set()
-        self._emit_heartbeat(healthy=True, resynced=True)
+        # MQTT connection/session state cannot prove missed producer events
+        # were recovered. Consumers must repair their own source history.
+        self._emit_heartbeat(healthy=True, resynced=False)
         if isinstance(self.config.get("heartbeat"), dict) and self.config["heartbeat"].get("enabled", False):
             if self.heartbeat_thread is None or not self.heartbeat_thread.is_alive():
                 self.heartbeat_thread = threading.Thread(target=self._heartbeat_loop, name=f"heartbeat:{self.config['id']}", daemon=True)

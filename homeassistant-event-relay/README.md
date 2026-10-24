@@ -35,7 +35,7 @@ mqtt_sources:
       enabled: true
       interval_seconds: 30
       event_type: frigate.bridge.heartbeat
-      subject: tapo_cam_125c
+      subject: example_dining_camera
     topics:
       - topic: frigate/reviews
         qos: 1
@@ -85,9 +85,10 @@ unfiltered stream is high volume and can contain sensitive data.
 
 An MQTT source may optionally emit a connection health heartbeat. The heartbeat
 is only useful when the source adapter has actually checked its broker
-connection; configure `data` only for additional fields because `healthy` and
-`resynced` are set by the adapter. A downstream aggregator can require this
-signal before treating silence as a quiet period.
+connection. `healthy` reports broker connectivity; `resynced` remains false
+because a connection does not prove producer history was recovered. The
+downstream consumer must repair gaps against its source API before treating
+silence as a quiet period.
 
 The add-on does not call CMA directly. The cloud destination validates the
 relay token, performs aggregation and sends only the final candidate event to a
