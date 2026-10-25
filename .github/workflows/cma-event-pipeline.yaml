@@ -46,3 +46,28 @@ jobs:
           tags: ghcr.io/chronoaiproject/nyx-homeassistant-cma-event-pipeline:${{ steps.version.outputs.value }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Verify packaged runtime starts with HA options and private SQLite
+        shell: bash
+        run: |
+          pipeline_test_dir=$(mktemp -d)
+          python - "$pipeline_test_dir" <<'PY'
+          import json,sys
+          from pathlib import Path
+          pipeline = {'version':1,'name':'image-smoke','source':{'adapter':'cloudevents',
+                      'source':'urn:example:image-smoke','types':['example.event'],
+                      'health':{'mode':'observed_events'}}}
+          options = {'pipeline_config':json.dumps(pipeline),'api_token':'a'*48,
+                     'provider_token':'p'*48,'relay_token':'r'*48,'worker_token':'w'*48}
+          Path(sys.argv[1],'options.json').write_text(json.dumps(options))
+          PY
+          image="ghcr.io/chronoaiproject/nyx-homeassistant-cma-event-pipeline:${{ steps.version.outputs.value }}"
+          docker run -d --name pipeline-smoke -p 127.0.0.1:18080:8080 -v "$pipeline_test_dir:/data" "$image"
+          trap 'docker logs pipeline-smoke; docker rm -f pipeline-smoke' EXIT
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:18080/healthz; then
+              test "$(stat -c %u "$pipeline_test_dir/state")" = 1000
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1

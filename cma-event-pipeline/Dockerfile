@@ -3,5 +3,5 @@ ARG BUILD_FROM=ghcr.io/chronoaiproject/frigate-cma-events@sha256:45bb93be6503641
 FROM ${BUILD_FROM}
 USER root
 COPY app /addon
-ENTRYPOINT ["python3", "/addon/run.py"]
+ENTRYPOINT ["/app/.venv/bin/python", "/addon/run.py"]
 CMD []
