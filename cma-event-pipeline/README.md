@@ -49,6 +49,19 @@ Start the add-on and verify health and authenticated status over the local node.
 The worker's existing event schema/prompt must agree with the configured output.
 Do not expose the unauthenticated internal Frigate API or this port publicly.
 
+CMA's current managed-key contract does not retain node grants
+([CMA #1111](https://github.com/ChronoAIProject/cma/issues/1111)). For that client,
+keep the original worker-facing NyxID service ID and use a bounded delegation:
+create a separate node-bound service for this add-on, mint a `proxy read` key
+restricted to exactly that service and its backing node (all broad access flags
+false), then point the original worker-facing service at the HTTPS NyxID proxy
+URL of the local service and inject that delegated key as bearer. The inner
+service injects `worker_token` on the node. This uses existing NyxID service
+routing; it adds no cloud application or model permission to raw Frigate.
+Leave CMA-managed keys unchanged so its renewal contract remains valid. Keep
+the delegate private, record its expiry, and rotate it through the original
+service credential before expiry. Verify both proxy layers with the worker.
+
 ## Persistence and migration
 
 SQLite databases live under `/data/state`, owned by the unprivileged runtime
@@ -71,8 +84,9 @@ To move an existing cloud deployment:
    database checksums, source/policy digests and SQLite integrity, and restores
    before accepting requests. Redirects and existing database replacement are
    refused. Restarting with existing databases skips network import.
-4. Update the original worker-service endpoint/node binding (preserving its
-   service ID/grants), inject the worker token into the local NyxID node, then
+4. Update the original worker-service endpoint/node binding, or configure the
+   bounded delegation above (preserving its service ID/grants), inject the
+   worker token into the local NyxID node, then
    switch the relay's existing destination to this add-on. Avoid dual writers.
 5. Verify historic IDs/results and downstream rows, relay recovery, an explicit
    integration test and restart persistence. Remove `state_import_url`, stop the

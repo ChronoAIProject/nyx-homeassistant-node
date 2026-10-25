@@ -9,9 +9,17 @@ reverse proxy; this add-on owns persistent event delivery and explicit outbound
 event permissions. A failed relay cannot disconnect the NyxID node.
 
 The default configuration has no sources and no routes. Nothing leaves Home
-Assistant until a route is configured. Destination URLs must use HTTPS and
+Assistant until a route is configured. Destination URLs use HTTPS by default and
 credentials are add-on password options. The SQLite outbox is kept in `/data`
 and retries transient delivery failures after restarts.
+
+For a trusted local add-on such as [CMA Event Pipeline](../cma-event-pipeline/README.md),
+set a destination's `allow_local_http: true` explicitly. HTTP is then accepted
+only for a private IP or a Supervisor add-on hostname (`core-…`, `local-…` or
+the repository hash prefix), with the normal bearer credential. Public HTTP,
+URL credentials and redirects remain refused. When migrating, change the URL
+of the existing destination without renaming its ID: queued messages retain
+that identity and will drain to the new local endpoint.
 
 ## Example configuration
 

@@ -70,6 +70,17 @@ class RelayCoreTests(unittest.TestCase):
         with self.assertRaises(ConfigurationError):
             parse_options({**base, "destinations": [{"id": "cloud", "url": "http://example.invalid"}]})
 
+    def test_plain_http_requires_explicit_local_destination(self):
+        base = {"mqtt_sources": [], "ha_sources": [], "routes": []}
+        for host in ('local-example-pipeline', 'core-example', '1234abcd-example', '172.30.33.9'):
+            destination = {"id":"local", "url":"http://"+host+":8080/ingest", "auth_type":"bearer", "auth_token":"synthetic"}
+            with self.subTest(host=host),self.assertRaises(ConfigurationError):
+                parse_options({**base,"destinations":[destination]})
+            self.assertEqual(parse_options({**base,"destinations":[{**destination,"allow_local_http":True}]})['destinations'][0]['url'],destination['url'])
+        for url in ('http://public.example', 'http://8.8.8.8', 'http://0.0.0.0', 'http://user:pass@local-example', 'http://local-example/#secret'):
+            with self.subTest(url=url),self.assertRaises(ConfigurationError):
+                parse_options({**base,"destinations":[{"id":"local","url":url,"auth_type":"none","allow_local_http":True}]})
+
 
 if __name__ == "__main__":
     unittest.main()

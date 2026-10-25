@@ -8,12 +8,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+import ipaddress
 import json
 from pathlib import Path
 import sqlite3
+import re
 import threading
 import time
 from typing import Any, Iterable
+from urllib.parse import urlsplit
 
 
 class ConfigurationError(ValueError):
@@ -289,8 +292,19 @@ def parse_options(raw: dict[str, Any]) -> dict[str, Any]:
         if destination_id in destination_ids:
             raise ConfigurationError(f"duplicate destination id: {destination_id}")
         destination_ids.add(destination_id)
-        if not str(destination["url"]).startswith("https://") or "@" in str(destination["url"]):
-            raise ConfigurationError("destinations must use https://")
+        url = urlsplit(str(destination["url"]))
+        local_http = destination.get("allow_local_http", False)
+        if type(local_http) is not bool:
+            raise ConfigurationError("allow_local_http must be a boolean")
+        local_host = bool(re.fullmatch(r"(?:core|local|[0-9a-f]{8})-[a-z0-9][a-z0-9-]*", url.hostname or ""))
+        try:
+            address = ipaddress.ip_address(url.hostname or "")
+            local_host = address.is_private and not address.is_unspecified and not address.is_multicast
+        except ValueError:
+            pass
+        if (not url.hostname or url.username or url.password or url.fragment
+                or not (url.scheme == "https" or (url.scheme == "http" and local_http and local_host))):
+            raise ConfigurationError("use HTTPS, or explicitly allow HTTP to a private IP/add-on hostname")
         auth_type = destination.get("auth_type", "bearer")
         if auth_type not in {"none", "bearer"}:
             raise ConfigurationError("destination auth_type must be none or bearer")

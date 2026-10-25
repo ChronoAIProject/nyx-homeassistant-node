@@ -1,0 +1,37 @@
+name: Publish Home Assistant Event Relay
+on:
+  push:
+    branches: [main]
+    paths: ['homeassistant-event-relay/**', '.github/workflows/publish-event-relay.yaml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s homeassistant-event-relay/tests -v
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: version
+        run: |
+          version=$(awk '/^version:/ {gsub(/"/, "", $2); print $2}' homeassistant-event-relay/config.yaml)
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v7
+        with:
+          context: homeassistant-event-relay
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/chronoaiproject/nyx-homeassistant-event-relay:${{ steps.version.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
