@@ -24,6 +24,10 @@ def main():
     options = json.loads(Path('/data/options.json').read_text())
     settings = environment(options, state)
     if os.getuid() == 0:
+        # HA owns /data; allow the runtime to traverse to its private child even
+        # when a fresh volume starts as 0700. Keep the parent owned by root so
+        # UID 1000 cannot replace Supervisor's private options.json.
+        Path('/data').chmod(0o711)
         os.chown(state, 1000, 1000)
         os.setgroups([])
         os.setgid(1000)
