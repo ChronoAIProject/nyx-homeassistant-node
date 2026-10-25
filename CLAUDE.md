@@ -14,6 +14,7 @@ For the full narrative / deeper architecture, see [`docs/ARCHITECTURE_NOTES.md`]
 | `nyxid-node/` | `homeassistant_api: true` — HA Core REST only | Always installed. Main pipe between NyxID and HA. |
 | `nyxid-node-admin/` | adds `hassio_api: true` + `hassio_role: admin` | Temporary. Install only when you need Supervisor-level ops (install add-ons, manage host). **Uninstalling = physical revocation** of admin capability. |
 | homeassistant-event-relay/ | homeassistant_api: true — selected HA Event Bus and MQTT sources | Optional. Explicit routes only; persists an outbound HTTPS outbox in /data. |
+| cma-event-pipeline/ | No HA/Supervisor API permission or host ports | Optional local generic aggregation/evidence service; upstream core is pinned, state lives in /data/state. |
 
 Both auto-provision their NyxID service on first start as of v1.1.1. User fills API key + label, add-on creates + binds + pushes credential.
 
