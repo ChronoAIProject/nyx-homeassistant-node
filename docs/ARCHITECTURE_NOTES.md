@@ -245,9 +245,13 @@ Viable but worse UX:
 
 Kept as Plan B; documented but not implemented.
 
-### Why user-facing config uses `*_service_label`, not `*_service_slug`
+### Ordinary-node labels and explicit service slugs
 
-Earlier versions required users to pre-create the slug on their own machine and paste it back. v1.1.1 flips this: user enters a label only, add-on auto-creates the service on first boot and stores the UUID in `/data/` for idempotency. Labels are allowed to collide (NyxID enforces no uniqueness on label) — the add-on never uses label as a key; it uses the saved UUID. See §7 for the provisioning flow.
+The ordinary node defaults to label-based automatic provisioning when NyxID
+permits service management by its key. `ha_service_slug` is an explicit supported
+fallback for an owner-created node-managed service. The admin variant currently
+requires `supervisor_service_slug`; its startup script only pushes credentials.
+Do not infer automatic admin provisioning from the historical v1.1.1 proposal.
 
 ### Why track services by UUID not by slug
 
@@ -255,78 +259,28 @@ Slug has random suffix and can be re-generated on re-create. UUID is stable fore
 
 ---
 
-## 7. v1.1.1 Provisioning Flow (spec)
+## 7. Current provisioning implementation
 
-Pseudocode for `supervisor.sh` (admin variant — main's `setup.sh` is symmetrical for `ha_service_label`):
+The ordinary `setup.sh` registers/revalidates the node, then takes one of two
+paths. An explicit `ha_service_slug` skips server-side service management. With
+no explicit slug and a nonempty `ha_service_label`, it reuses a matching saved
+node-managed service UUID or creates a new service using bearer auth and the
+node ID in the same POST. An API-key service-management refusal requires the
+owner-created-service fallback in [the setup guide](../SETUP_GUIDE.md).
 
-```bash
-#!/command/with-contenv bashio
-# Read user config
-label=$(bashio::config 'supervisor_service_label')        # default: "HA Supervisor"
-api_key=$(bashio::config 'nyxid_api_key')
-api_base=$(bashio::config 'nyxid_server_url' | sanitize)
+Both paths push the current Supervisor-issued Core API token locally on every
+start. The script then synchronizes configured additional service credentials
+and removes stale entries tracked in `/data/configured-services.txt`.
 
-NYX_CFG=/data/nyxid-node
-STATE_FILE=/data/supervisor-service-id
+The admin inherits node registration but has no HA service label. Its separate
+`supervisor.sh` reads `supervisor_service_slug` and pushes the Supervisor token
+locally to that pre-created service on the **admin node**. Current code does not
+implement the historical proposed `supervisor_service_label` auto-provisioner.
+Create its server record as an owner with bearer auth and node binding together.
 
-# Resolve THIS node's UUID (setup.sh should have registered already)
-node_id=$(grep '^id' "$NYX_CFG/config.toml" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
-
-# Try to reuse previously-provisioned service
-service_id=$(cat "$STATE_FILE" 2>/dev/null)
-reuse=false
-
-if [ -n "$service_id" ]; then
-  resp=$(curl -s "$api_base/api/v1/keys/$service_id" -H "Authorization: Bearer $api_key")
-  if [ "$(echo $resp | jq -r .id)" = "$service_id" ] \
-      && [ "$(echo $resp | jq -r .node_id)" = "$node_id" ]; then
-    reuse=true
-    slug=$(echo "$resp" | jq -r .slug)
-    current_label=$(echo "$resp" | jq -r .label)
-    # If user changed the label, sync it up
-    if [ "$current_label" != "$label" ]; then
-      curl -s -X PUT "$api_base/api/v1/keys/$service_id" \
-        -H "Authorization: Bearer $api_key" \
-        -d "{\"label\":\"$label\"}"
-    fi
-  else
-    # Stale ID, forget it
-    rm -f "$STATE_FILE"
-    service_id=""
-  fi
-fi
-
-# Create fresh service if needed — single POST, never POST-then-PUT
-if [ -z "$service_id" ]; then
-  resp=$(curl -s -X POST "$api_base/api/v1/keys" \
-    -H "Authorization: Bearer $api_key" \
-    -d "{
-      \"label\": \"$label\",
-      \"key_type\": \"http\",
-      \"endpoint_url\": \"http://supervisor\",
-      \"auth_method\": \"bearer\",
-      \"auth_key_name\": \"Authorization\",
-      \"node_id\": \"$node_id\"
-    }")
-  service_id=$(echo "$resp" | jq -r .id)
-  slug=$(echo "$resp" | jq -r .slug)
-  echo "$service_id" > "$STATE_FILE"
-fi
-
-# Push credential on this node (every start — SUPERVISOR_TOKEN rotates)
-nyxid node credentials --config "$NYX_CFG" add \
-  --service "$slug" \
-  --header Authorization \
-  --secret-format bearer \
-  --value "$SUPERVISOR_TOKEN" \
-  --url "http://supervisor"
-```
-
-Key properties:
-- **Idempotent**: re-runs on every add-on start; no duplicate service creation
-- **Recovery**: if the service is deleted server-side, `GET /keys/$id` 404s → state file cleared → fresh create
-- **Label-follow**: user can edit the label in add-on config; on restart, it syncs to server
-- **No user-visible slug**: slug is used only internally. Users interact via `nyxid proxy request <slug>` — they get the slug from the add-on log on first boot (or from `nyxid service list`)
+`/data/ha-service-id` anchors ordinary automatic provisioning. Do not treat a
+slug change, a missing local credential and a disconnected node as the same
+failure. Check the service record, node identity, credential and target in order.
 
 ---
 
@@ -363,7 +317,46 @@ nyxid api-key rotate <id>
 
 ---
 
-## 9. Cross-references
+## 9. Independent event add-ons
+
+```text
+MQTT / HA Event Bus -> Event Relay -> CMA Event Pipeline on HA -> CMA channel
+                          |                 |                      |
+                    durable outbox    SQLite /data/state       remote worker
+                                            ^                      |
+                                 local Frigate history       NyxID proxy
+                                            ^                      |
+                                            +--- ordinary HA node -+
+```
+
+Relay selects/redacts metadata and authenticates with `relay_token`. Pipeline
+normalizes events, applies declarative policy/limits, repairs Frigate history,
+selects bounded historical crops and signs candidate deliveries. Inference and
+destination writes belong to the worker. Operator and worker tokens are distinct;
+callbacks are worker reports and require independent downstream verification.
+
+The HA wrapper pins the generic core image from `frigate-cma-events`, reads
+allowlisted HA options, creates `/data/state`, drops to UID 1000, and execs the
+core. It has no HA/Supervisor API permission, host network or published host port.
+Its credentials remain in HA options/backups; SQLite persists across updates.
+
+CMA managed service grants currently do not retain backing-node grants
+([CMA #1111](https://github.com/ChronoAIProject/cma/issues/1111)). An explicit
+worker-facing NyxID service can inject a dedicated `proxy read` key scoped to
+one inner node-bound service and its node. That inner service injects the worker
+token locally. An operator service injects a separate API token. These are
+routing roles for one container, not redundant applications. Do not manually
+edit CMA-managed keys; privately record and rotate the delegation key's expiry.
+
+Cloud deployment remains a supported alternative for other installations.
+Once a local migration passes persistence, evidence and destination verification,
+retire the old app and its database, then unused credentials and failed worker
+attempts. Retain private portable exports/specs rather than a live rollback app.
+Database-user deletion alone does not prove data was removed; check the platform's
+actual purge behavior. The [Pipeline runbook](../cma-event-pipeline/README.md)
+describes verification and retirement.
+
+## 10. Cross-references
 
 - Build history / chronological story → [DEVELOPMENT.md](../DEVELOPMENT.md)
 - User-facing setup → [SETUP_GUIDE.md](../SETUP_GUIDE.md)

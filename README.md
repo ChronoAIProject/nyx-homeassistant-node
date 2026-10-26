@@ -1,209 +1,148 @@
-# NyxID Node — Home Assistant Add-on
+# NyxID Home Assistant add-ons
 
-Run a [NyxID](https://github.com/ChronoAIProject/NyxID) credential node agent on Home Assistant OS. Securely reverse-proxy your Home Assistant instance and other LAN services through NyxID — credentials never leave your local network.
+Run [NyxID](https://github.com/ChronoAIProject/NyxID) local credential routing and
+configurable event processing on Home Assistant OS. This repository packages
+four independent add-ons for amd64 and aarch64:
 
-## Quick Start — Give This to Your AI Assistant
-
-Copy this one line into Claude Code, Codex, Cursor, or any AI coding assistant:
-
-```
-Install the NyxID Node add-on on my Home Assistant. Follow the guide at https://github.com/ChronoAIProject/nyx-homeassistant-node/blob/main/SETUP_GUIDE.md
-```
-
-The AI will walk you through the setup step by step.
-
-## Documentation
-
-- [SETUP_GUIDE.md](SETUP_GUIDE.md) — user-facing install + config walkthrough
-- [docs/ARCHITECTURE_NOTES.md](docs/ARCHITECTURE_NOTES.md) — **deep reference**: HA auth model, NyxID service lifecycle, filed upstream issues, and the full design rationale. **Read this before making architectural changes.**
-- [DEVELOPMENT.md](DEVELOPMENT.md) — chronological build history up to v1.0.0
-- [Home Assistant Event Relay](homeassistant-event-relay/README.md) — configurable MQTT/Event Bus forwarding with a durable local outbox
-- [CMA Event Pipeline](cma-event-pipeline/README.md) — local event aggregation, bounded Frigate evidence and signed CMA delivery, with durable SQLite state
-- [Dining review reference application](https://github.com/ChronoAIProject/frigate-cma-events/tree/main/examples/dining) — complete Frigate → relay → CMA visual worker → Google Sheets example, with private deployment parameters
-
-## How It Works
-
-```
-External Client → NyxID Server → WebSocket → This Add-on → Local Services
-                                (outbound)    (credential    (HA, NAS, etc.)
-                                              injection)
-```
-
-1. The add-on connects to your NyxID server via outbound WebSocket (no inbound ports needed)
-2. When a proxy request arrives, the node agent injects the locally-stored credentials
-3. The request is forwarded to the target service on your LAN
-4. Credentials never leave your network — NyxID only sees the request metadata
+| Add-on | Responsibility | Permissions / storage |
+| --- | --- | --- |
+| **NyxID Node** | Proxy Home Assistant and selected LAN services through an outbound NyxID connection | HA Core API; host network; persistent node identity/credentials in `/data` |
+| **NyxID Node (Admin)** | Temporary Supervisor management | Supervisor admin; install only for management work |
+| **Home Assistant Event Relay** | Filter selected MQTT / HA events and reliably forward CloudEvents | HA Core API; persistent SQLite outbox in `/data` |
+| **CMA Event Pipeline** | Aggregate, deduplicate, limit and select bounded historical evidence, then deliver candidates to CMA | No HA/Supervisor API permission or host ports; SQLite in `/data/state` |
 
 ## Installation
 
-1. In Home Assistant, go to **Settings → Add-ons → Add-on Store**
-2. Click **⋮ → Repositories** and add:
+In **Settings → Add-ons → Add-on Store → ⋮ → Repositories**, add:
+
+```text
+https://github.com/ChronoAIProject/nyx-homeassistant-node
+```
+
+Install the add-ons your workflow needs. Experimental versions may require
+**Advanced mode** in your HA profile. This repository contains the HA packaging;
+[CMA Event Pipeline's core](https://github.com/ChronoAIProject/frigate-cma-events)
+is maintained and tested separately, and pinned by image digest in its Dockerfile.
+
+## Set up NyxID Node
+
+For an AI-assisted installation, give your assistant:
+
+```text
+Install the NyxID Node add-on on my Home Assistant. Follow https://github.com/ChronoAIProject/nyx-homeassistant-node/blob/main/SETUP_GUIDE.md
+```
+
+1. Sign in locally with `nyxid login` and create a dedicated provisioning key:
+
+   ```sh
+   nyxid api-key create --name ha-addon \
+     --scopes "read write" --allow-all-nodes --allow-all-services
    ```
-   https://github.com/ChronoAIProject/nyx-homeassistant-node
+
+   Enter its one-time secret directly into HA's **NyxID API Key** field.
+   This management key omits `proxy`; calling services requires separate proxy
+   authorization. The broad service/node flags support provisioning; restrict
+   management access according to your organization's policies.
+2. Leave **HA Service Label** as `Home Assistant` and **HA Service Slug** empty
+   for automatic provisioning. Set the server URL and node name, save, and start.
+3. The add-on registers its node, creates/reuses a node-managed HA service when
+   its key is allowed to manage services, and injects its Supervisor-issued Core
+   credential locally on every start. If NyxID refuses service management for
+   API keys, create the node-bound bearer service with an owner session and
+   configure its returned `ha_service_slug`; see the [setup guide](SETUP_GUIDE.md).
+4. Read the actual slug from the logs or `nyxid service list`, then verify:
+
+   ```sh
+   nyxid proxy request <ha-service-slug> ""
+   nyxid proxy request <ha-service-slug> "states"
    ```
-3. Find **NyxID Node** in the store and click **Install**
 
-## Setup
+   Paths are relative to `http://supervisor/core/api`; the empty path returns
+   `{"message":"API running."}`. Do not add another `api/` prefix.
 
-### Step 1: Create the HA service (on your machine, one-time)
+Node credentials are injected on HA. Requests and responses still pass through
+NyxID; local credential storage does not make the proxied response confidential
+from that server. HA options and backups can also contain secrets.
 
-```bash
-nyxid service add --custom \
-  --label "Home Assistant" \
-  --endpoint-url "http://supervisor/core/api" \
-  --auth-method none
+## Local event processing
+
+```text
+Frigate / MQTT / selected HA Event Bus events
+    -> Home Assistant Event Relay (filter + durable queue)
+    -> CMA Event Pipeline on HA (aggregate + limits + historical selection)
+    -> signed CMA Event Channel -> CMA visual worker -> configured destination
+
+CMA worker -> NyxID -> ordinary HA node -> local pipeline /evidence and /results
+                                            |
+                                      local Frigate history
 ```
 
-Note the **Slug** from the output (e.g., `home-assistant-xxxx`).
+Raw recordings remain with Frigate and its configured storage. The local
+pipeline samples historical frames and exposes only bounded candidate evidence.
+CMA workers and NyxBot remain remote; selected images are sent to the worker for
+analysis. This topology needs no cloud aggregation app or MongoDB. A NyxID
+service entry is a credential/routing entry, not another application deployment.
 
-### Step 2: Create an API key (on your machine, one-time)
+- [Relay configuration](homeassistant-event-relay/README.md): explicit sources,
+  routes, heartbeat semantics and trusted local HTTP destinations.
+- [Pipeline installation and operations](cma-event-pipeline/README.md): HA
+  options, storage, worker access, migration, verification and retirement.
+- [Dining reference application](https://github.com/ChronoAIProject/frigate-cma-events/tree/main/examples/dining):
+  whole-table observations, a CMA worker and verified Sheets writes.
 
-```bash
-nyxid api-key create --name ha-addon \
-  --scopes "read write" \
-  --allow-all-nodes --allow-all-services
-```
+The worker-facing evidence route, its node-bound delegate and the separate
+operator route have different credential roles. Keep them while the workflow is
+active. CMA currently requires scoped delegation for managed keys that cannot
+retain node grants; the pipeline guide documents this and key rotation.
 
-Note the **key** (starts with `nyx_`).
+## Other LAN services and HA identities
 
-### Step 3: Configure the Add-on
-
-In Home Assistant, go to **NyxID Node → Configuration** and fill in:
-
-| Field | Value |
-|-------|-------|
-| **NyxID API Key** | The `nyx_...` key from Step 2 |
-| **HA Service Slug** | The slug from Step 1 |
-
-Click **Save**, then **Start**.
-
-### Verify
-
-After starting, check the add-on logs. You should see:
-
-```
-Node registered successfully.
-Updating HA credential (slug: home-assistant-xxxx)...
-Setup complete.
-Starting NyxID node agent...
-Authenticated with NyxID server
-```
-
-Test from your machine:
-
-```bash
-nyxid proxy request home-assistant-xxxx "api/"
-# Should return: {"message":"API running."}
-```
-
-## Additional Services
-
-To proxy other LAN services, add entries to the `services` list in the add-on config:
+Create the service with its final `node_id` and authentication method in the
+initial request. For a bearer-protected LAN service, use the owner's supported
+NyxID service setup / node-credential flow, or add a matching local entry:
 
 ```yaml
 services:
-  - slug: synology-nas
-    target_url: http://192.168.1.100:5000
+  - slug: example-service
+    target_url: http://example-device.local:8080
     credential_type: header
     credential_name: Authorization
-    credential_value: "Bearer your-token-here"
+    credential_value: "Bearer <device-token>"
 ```
 
-## Multiple HA identities (long-lived access tokens)
+Use the actual slug returned by NyxID. The `services` list configures local
+credentials/targets; it does not create the server's service record. Restart the
+node to apply changes. Values are private HA options and can be present in HA
+backups. For additional HA identities, use separate HA users/tokens and separate
+node-bound services pointing to `http://homeassistant.local:8123/api`.
 
-The add-on auto-provisions **one** HA service, backed by its own non-admin
-service account. To reach Home Assistant under **additional identities** — an
-admin token for an AI that manages Lovelace, a scoped user for a light bot, a
-read-only user for dashboards — create a long-lived access token (LLAT) per
-identity and register each as its own NyxID service pointing at **this node**.
-No add-on restart or config edit is needed: NyxID delivers the credential to the
-node over the existing WebSocket, so the token never touches the add-on config
-or `/data` (NyxID [#418](https://github.com/ChronoAIProject/NyxID/issues/418)).
+Do not create a service as `auth_method: none` and later add bearer auth/node
+binding: older NyxID versions can leave its credential type incompatible with
+node routing. Follow the single-create pattern in the setup guide.
 
-1. **In Home Assistant**, create a user per identity
-   (**Settings → People → Users**), sign in as that user, and generate a token
-   under **Profile → Security → Long-lived access tokens**.
+## Temporary Supervisor administration
 
-2. **On your machine**, add one bearer service per token, bound to this node.
-   The add-on's startup log prints the node id to use here:
+The ordinary node has Core API permissions. To manage add-ons remotely, install
+**NyxID Node (Admin)** temporarily. It registers a separate node and pushes a
+Supervisor credential to a **pre-created** node-bound service named by
+`supervisor_service_slug`; it does not auto-create that service. Create it with
+an owner session, bearer auth, `endpoint_url: http://supervisor`, and the admin
+node's actual ID. Configure the returned slug and restart the admin add-on.
 
-   ```bash
-   nyxid service add --custom \
-     --label "HA (Admin)" \
-     --via-node <node-id> \
-     --endpoint-url "http://homeassistant.local:8123" \
-     --auth-method bearer \
-     --auth-key-name Authorization
-   ```
-
-   A browser wizard opens to paste the LLAT
-   (NyxID [#414](https://github.com/ChronoAIProject/NyxID/issues/414)); NyxID
-   pushes it to the node. Pass `--terminal` for shell instructions instead.
-
-3. **Call it** with the returned slug:
-
-   ```bash
-   nyxid proxy request ha-admin-xxxx "states"
-   ```
-
-Rotate or revoke one identity by deleting its LLAT in Home Assistant and its
-service in NyxID — the others are unaffected.
-
-> The `services` list above is the local-config alternative: it keeps the
-> credential in the add-on options, which is fine for **non-HA** LAN targets
-> (a NAS, a printer) but means one more place a secret lives. For HA identities,
-> prefer per-token NyxID services.
-
-## Temporary admin mode — `NyxID Node (Admin)`
-
-The main add-on only has Core API access, so it cannot install/manage add-ons remotely. For that, install the sibling add-on **NyxID Node (Admin)** from the same repository *only when you need it*, then **uninstall** to fully revoke the elevated capability.
-
-### How it differs
-
-| | NyxID Node | NyxID Node (Admin) |
-|---|---|---|
-| `hassio_role` | (none) | **admin** |
-| `/api/*` (Core API) | ✅ | ✅ |
-| `/supervisor/*`, `/addons/*`, `/store/*` | ❌ 403 | ✅ |
-| `boot` | auto | **manual** |
-| Use case | always-on | install → use → uninstall |
-
-### Usage
-
-```bash
-# On your machine — one-time: register a Supervisor service slug
-nyxid service add --custom \
-  --label "HA Supervisor" \
-  --endpoint-url "http://supervisor" \
-  --auth-method none
+```sh
+nyxid proxy request <supervisor-service-slug> "supervisor/info"
+nyxid proxy request <supervisor-service-slug> "addons"
 ```
 
-In HA: install **NyxID Node (Admin)**, paste the slug into `Supervisor Service Slug`, start.
+Supervisor admin can install/remove add-ons and change host state. Grant this
+route only to intended operators. Uninstall the admin add-on when finished and
+retire its unused service/key grants. The Relay and Pipeline do not require it
+for normal operation.
 
-Now you can drive the Supervisor API via NyxID:
+## Contributor references
 
-```bash
-# Add Frigate repository
-nyxid proxy request supervisor-xxxx "store/repositories" \
-  --method POST \
-  --body '{"repository":"https://github.com/blakeblackshear/frigate-hass-addons"}'
-
-# Install Frigate
-nyxid proxy request supervisor-xxxx \
-  "store/addons/blakeblackshear_frigate_hass-addons_frigate/install" \
-  --method POST
-```
-
-When done: **uninstall the admin add-on**. The container is destroyed, the `SUPERVISOR_TOKEN` is invalidated, and `hassio_role: admin` is no longer declared anywhere. Stopping (without uninstalling) also works but is weaker — the permission declaration stays on disk.
-
-### Security note
-
-`hassio_role: admin` grants root-equivalent control over your HA system. Anyone who obtains the NyxID API key while the admin add-on is running can install/remove any add-on, read `/data`, and modify Supervisor state. Keep the admin add-on uninstalled by default.
-
-## Architecture
-
-- **amd64** and **aarch64** supported
-- Persistent data stored in `/data/` (survives add-on updates)
-- Process managed by s6-overlay with automatic restart on crash
-- Node agent includes built-in WebSocket reconnection with exponential backoff
-- JWT session never leaves your machine — only a scoped API key is stored on HA
+- [Setup guide](SETUP_GUIDE.md) — current provisioning and verification.
+- [Architecture notes](docs/ARCHITECTURE_NOTES.md) — auth boundaries and service lifecycle.
+- [Assistant project guide](CLAUDE.md) — implementation and release facts.
+- [Development history](DEVELOPMENT.md) and dated design documents — historical
+  decisions; use current configuration/scripts for installation.

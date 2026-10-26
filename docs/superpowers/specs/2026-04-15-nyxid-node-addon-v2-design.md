@@ -1,5 +1,9 @@
 # NyxID Node HA Add-on — Architecture Design v2
 
+> Historical design/build record. Some proposed provisioning and build steps
+> differ from the current implementation. Use [the current setup guide](../../../SETUP_GUIDE.md)
+> and checked-in schemas/scripts for installation and operation.
+
 ## Problem
 
 The Add-on needs to register a NyxID credential node on HAOS, create a proxy-visible service, and keep credentials in sync — while respecting NyxID's auth model where only JWT sessions can create proxyable services.

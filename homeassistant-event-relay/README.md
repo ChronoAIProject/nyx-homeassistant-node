@@ -2,7 +2,8 @@
 
 This add-on is a configurable, local event relay. It can subscribe to selected
 Home Assistant Event Bus event types and MQTT topics, filter them with declarative
-rules, redact JSON paths, and deliver CloudEvents to HTTPS destinations.
+rules, redact JSON paths, and deliver CloudEvents to configured authenticated HTTP endpoints. HTTPS is
+the default; trusted local HTTP requires explicit opt-in.
 
 It is intentionally a separate add-on from `nyxid-node`. NyxID node remains a
 reverse proxy; this add-on owns persistent event delivery and explicit outbound
@@ -54,18 +55,19 @@ ha_sources:
       - state_changed
 
 destinations:
-  - id: cloud_ingest
-    url: https://example.invalid/ingest
+  - id: pipeline_ingest
+    url: http://0123abcd-cma-event-pipeline:8080/ingest
+    allow_local_http: true
     auth_type: bearer
     auth_token: <configured-in-HA>
 
 routes:
   - id: frigate_reviews
     source: frigate
-    destination: cloud_ingest
+    destination: pipeline_ingest
     event_types: []
-    topics:
-      - frigate/reviews
+    # Heartbeats have no MQTT topic; the source already subscribes only to reviews.
+    topics: []
     subjects: []
     json_equals: []
     redact_paths: []
@@ -74,7 +76,7 @@ routes:
 
   - id: selected_states
     source: ha_state
-    destination: cloud_ingest
+    destination: pipeline_ingest
     event_types:
       - homeassistant.state_changed
     subjects:
@@ -98,10 +100,12 @@ because a connection does not prove producer history was recovered. The
 downstream consumer must repair gaps against its source API before treating
 silence as a quiet period.
 
-The add-on does not call CMA directly. The cloud destination validates the
-relay token, performs aggregation and sends only the final candidate event to a
-CMA custom channel. Keeping the CMA HMAC secret in the cloud service means the
-HA relay cannot forge CMA events.
+The add-on does not call CMA directly. The separate Pipeline validates the
+relay token, aggregates metadata and signs only candidate events for CMA. It
+can run on the same HA host or on an explicitly configured remote deployment.
+The CMA HMAC secret belongs to Pipeline configuration, not Relay options.
+For a remote destination use HTTPS and omit `allow_local_http`; no cloud
+aggregation app is required for the local topology.
 
 The relay forwards metadata only. Image selection and model work belong to the
 downstream application.
@@ -109,10 +113,29 @@ downstream application.
 ## End-to-end application example
 
 The [dining review reference application](https://github.com/ChronoAIProject/frigate-cma-events/tree/main/examples/dining)
-connects this relay to deterministic cloud aggregation, a bounded historical
-image endpoint, a CMA visual worker and Google Sheets. Its templates include a
-camera-filtered relay configuration and the matching cloud/worker/channel/Sheet
-parameters. Actual camera identifiers, accounts and credentials are filled in
+connects this relay to local HA aggregation, a bounded historical image
+endpoint, a CMA visual worker and Google Sheets. The application also supports
+cloud aggregation as an alternative. Its walkthrough covers private
+camera-filtered relay, pipeline, worker/channel and Sheet settings. Actual camera identifiers, accounts and credentials are filled in
 private installation files outside the repositories. The scene-specific rules
 and worker prompt are maintained with that application; this add-on provides
 the reusable event transport.
+
+## Operations and migration
+
+Use the actual internal hostname from Supervisor's add-on information; the
+repository prefix varies by installation. `0123abcd` above is synthetic.
+Relay's `auth_token` must equal the receiving Pipeline's `relay_token`.
+A worker/operator credential is not an ingest credential.
+
+When moving an existing route, keep its destination ID and change only the
+URL/credential/local-HTTP option deliberately. Durable queued entries reference
+that ID; renaming it can strand old deliveries. Do not infer an empty Relay
+queue from Pipeline's `cma_deliveries.pending`: they are separate outboxes.
+
+Verify actual delivery and downstream candidate/result processing before
+removing a retired destination or cloud application. A synthetic Pipeline replay
+has no external side effects; explicit integration validation exercises its
+outbound CMA/worker path and bypasses MQTT admission. A real source event is
+needed to validate that upstream path. See the [Pipeline runbook](../cma-event-pipeline/README.md)
+for the full test and cleanup sequence.

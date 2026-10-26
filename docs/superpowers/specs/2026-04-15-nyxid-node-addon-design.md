@@ -1,5 +1,9 @@
 # NyxID Node Home Assistant Add-on — Design Spec
 
+> Historical design/build record. Some proposed provisioning and build steps
+> differ from the current implementation. Use [the current setup guide](../../../SETUP_GUIDE.md)
+> and checked-in schemas/scripts for installation and operation.
+
 ## Overview
 
 A Home Assistant Add-on that packages the NyxID credential node agent (Rust) as a Docker container running on HAOS. The node agent connects to a NyxID server via outbound WebSocket, receives proxy requests, injects locally-stored credentials, and forwards them to Home Assistant and other LAN services. Credentials never leave the local network.

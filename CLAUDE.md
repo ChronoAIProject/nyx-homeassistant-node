@@ -1,7 +1,7 @@
 # CLAUDE.md — project guide for AI assistants
 
-This repo ships two Home Assistant add-ons that bridge HA to NyxID, plus an
-independent opt-in event relay. Before making changes, skim this file top to
+This repo ships four independent Home Assistant add-ons: the ordinary and
+temporary admin NyxID nodes, Event Relay, and local CMA Event Pipeline. Before making changes, skim this file top to
 bottom — it captures the non-obvious bits that cost the last session hours to
 re-discover.
 
@@ -13,10 +13,10 @@ For the full narrative / deeper architecture, see [`docs/ARCHITECTURE_NOTES.md`]
 |---|---|---|
 | `nyxid-node/` | `homeassistant_api: true` — HA Core REST only | Always installed. Main pipe between NyxID and HA. |
 | `nyxid-node-admin/` | adds `hassio_api: true` + `hassio_role: admin` | Temporary. Install only when you need Supervisor-level ops (install add-ons, manage host). **Uninstalling = physical revocation** of admin capability. |
-| homeassistant-event-relay/ | homeassistant_api: true — selected HA Event Bus and MQTT sources | Optional. Explicit routes only; persists an outbound HTTPS outbox in /data. |
+| homeassistant-event-relay/ | homeassistant_api: true — selected HA Event Bus and MQTT sources | Optional. Explicit routes only; persists an outbox in /data; HTTPS by default, explicit trusted local HTTP supported. |
 | cma-event-pipeline/ | No HA/Supervisor API permission or host ports | Optional local generic aggregation/evidence service; upstream core is pinned, state lives in /data/state. |
 
-Both auto-provision their NyxID service on first start as of v1.1.1. User fills API key + label, add-on creates + binds + pushes credential.
+The ordinary node attempts automatic service provisioning when `ha_service_slug` is empty and `ha_service_label` is set. An explicit slug skips service-management API calls. The current admin variant requires an owner-created `supervisor_service_slug` and only pushes its local credential; it does not auto-create a service.
 
 ## Hard facts about HA's auth (often misunderstood)
 
@@ -56,20 +56,26 @@ nyxid node credentials --config <node-config-dir> add \
 
 Without this push → `503 node_offline` even though the node is online and the service exists.
 
-## How we provision inside `setup.sh` / `supervisor.sh`
+## Current provisioning scripts
 
-Both scripts follow the same pattern:
+The checked-in schema/scripts are authoritative; dated design documents are
+historical. `nyxid-node/rootfs/etc/cont-init.d/setup.sh`:
 
-1. Read `ha_service_label` (main) or `supervisor_service_label` (admin). If empty/null, **skip provisioning entirely**. `bashio::config` returns the literal string `"null"` when a key is missing — check for `[ -z "$x" ] || [ "$x" = "null" ]`, not just `bashio::var.is_empty`.
-2. Resolve node UUID from `/data/nyxid-node/config.toml` (populated by node register step).
-3. Legacy migration (one-time): read old state file (`/data/configured-services.txt` for main, `/data/last-supervisor-slug` for admin), resolve slug → UUID via `GET /keys`, save to new state file.
-4. Reuse check: `GET /keys/{saved_id}` — reuse only if `node_id` matches AND `credential_type == "node_managed"`. Anything else → delete state file, create fresh.
-5. Create fresh: single POST with `auth_method=bearer`, `auth_key_name=Authorization`, `endpoint_url`, `node_id`. Save returned ID to state file.
-6. Push credential with `SUPERVISOR_TOKEN` every start (token rotates across add-on restarts).
+1. Registers or recovers the saved node identity.
+2. If `ha_service_slug` is set, reuses it without service-management calls.
+3. Otherwise, if `ha_service_label` is set, checks `/data/ha-service-id`, reuses
+   a matching node-managed record or creates bearer + node binding in one POST.
+   A deployment that rejects API-key service management needs an owner-created
+   service and explicit slug; do not retry with `auth_method: none`.
+4. Pushes the rotating `SUPERVISOR_TOKEN` locally for the HA Core target.
+5. Synchronizes the explicit `services` list and removes stale synchronized entries.
+   `/data/configured-services.txt` records those slugs.
 
-State files:
-- `/data/ha-service-id` (main)
-- `/data/supervisor-service-id` (admin)
+The admin's inherited setup skips HA provisioning (no `ha_service_label`).
+`nyxid-node-admin/rootfs/etc/cont-init.d/supervisor.sh` pushes the rotating
+Supervisor token to the configured `supervisor_service_slug` on its **own**
+node. An owner must pre-create that bearer/node-bound service. The admin has
+no `supervisor_service_label` field or automatic service-creation state file.
 
 ## Testing and deployment
 
@@ -101,6 +107,11 @@ nyxid proxy request <lan-node-slug> "api/hassio/addons/8404a721_nyxid-node-admin
 ```
 
 ### Release process
+
+The following version coupling is for the two node images. Relay and Pipeline
+have independent config versions and publish workflows. Pipeline pins the
+upstream `frigate-cma-events` core by immutable digest; do not copy core logic
+into the HA packaging. Its CI includes an actual options/startup/UID smoke test.
 
 - Feature work on branches: `dev-vX.Y.Z` (but since we're small-scale, merging directly to `main` with pre-release tag is fine).
 - Pre-release: bump both `config.yaml` versions to `X.Y.Z-alpha.N` (or `-rc.N`). Add `stage: experimental` so default HA users don't see it.
@@ -156,7 +167,7 @@ over `/api/websocket` with an admin LLAT.
 
 ## Things NOT to do
 
-- Don't set `ha_service_slug` / `supervisor_service_slug` as required input fields. Those are internal. Users fill labels, the add-on makes slugs.
+- Ordinary-node default setup uses a label; `ha_service_slug` is the supported owner-created-service fallback. Admin requires `supervisor_service_slug`. Do not document an admin auto-provisioning option absent from its schema.
 - Don't POST a service then PUT to add `node_id` / `auth_method` — hits the `credential_type: none` trap. Single POST, always.
 - Don't use `bashio::var.is_empty` alone to detect missing config keys. Also check for `"null"`.
 - Don't rename / delete the inherited `setup.sh` in the admin add-on. Admin is `FROM` the main image; setup.sh runs first (lexicographic order: `setup.sh` < `supervisor.sh`). Admin skips HA provisioning because it has no `ha_service_label` in its config.
@@ -187,10 +198,32 @@ nyxid proxy request <main-slug> ""
 # Admin Supervisor API reachable?
 nyxid proxy request <admin-slug> "supervisor/ping"
 
-# Add-on versions (via any channel with Core API):
-nyxid proxy request <lan-node-slug> "api/hassio/addons/8404a721_nyxid-node/info"
-nyxid proxy request <lan-node-slug> "api/hassio/addons/8404a721_nyxid-node-admin/info"
+# Add-on versions (requires Supervisor route):
+nyxid proxy request <supervisor-slug> "addons/<installed-addon-slug>/info"
 
 # CI status
 gh run list --limit 3
 ```
+
+## Local event processing and cleanup
+
+The current supported topology is Frigate/MQTT or selected HA events → Relay →
+local Pipeline → signed CMA channel → worker/destination. Pipeline uses local
+Frigate access and SQLite `/data/state`; raw recordings stay with Frigate.
+CMA/NyxBot remain remote and receive selected evidence. Relay, Pipeline and the
+ordinary credential node are independent containers; neither event add-on needs
+Supervisor admin for normal operation.
+
+Worker, delegated node and operator NyxID entries can point to one Pipeline
+instance with different credentials. They are required routing/auth boundaries,
+not duplicate deployments. CMA managed keys currently cannot retain node grants
+([#1111](https://github.com/ChronoAIProject/cma/issues/1111)); use the explicit
+one-service/one-node delegation documented in `cma-event-pipeline/README.md`.
+Keep managed keys under CMA lifecycle control and privately track delegate expiry.
+
+Retire cloud apps/databases and failed worker attempts only after verifying the
+local chain, state and downstream rows. Save private exports/specs before removal,
+verify database data removal separately from deleting its user, and revoke only
+credentials proved exclusive to retired resources. Do not publish site resource
+IDs, media, installation history or cleanup receipts. See the Pipeline guide for
+the full checklist.

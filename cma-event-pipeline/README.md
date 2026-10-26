@@ -35,10 +35,12 @@ HA / MQTT -> HA Event Relay -> this add-on /ingest
    URL, for example `http://EXAMPLE-frigate:5000`. This uses the add-on network;
    source media is sampled locally. `frigate_api_key` is optional for a direct
    unauthenticated internal API, and is sent as bearer only when configured.
-6. Configure the existing NyxID node's services list with this add-on's internal
-   URL and `Authorization: Bearer <worker_token>`. Create or update the matching
-   NyxID service, bound to that node, and authorize the CMA worker for the service
-   and backing node. Use the actual hostname from Supervisor add-on info.
+6. Configure the existing ordinary NyxID node's services list with this add-on's
+   internal URL and `Authorization: Bearer <worker_token>`. Create the matching
+   bearer service with its node binding in the initial request. Use the actual
+   hostname from Supervisor add-on info. Clients need the service and backing
+   node authorization; CMA managed workers use the explicit delegation below.
+   Keep a separate owner-only operator service injecting `api_token`.
 7. Point the selected HA Event Relay destination to
    `http://EXAMPLE-cma-event-pipeline:8080/ingest` with `auth_type: bearer` and
    `auth_token: <relay_token>`. Forward only explicitly selected events. Keep
@@ -89,8 +91,9 @@ To move an existing cloud deployment:
    worker token into the local NyxID node, then
    switch the relay's existing destination to this add-on. Avoid dual writers.
 5. Verify historic IDs/results and downstream rows, relay recovery, an explicit
-   integration test and restart persistence. Remove `state_import_url`, stop the
-   cloud instance, and retain the private snapshot/spec for rollback.
+   integration test and restart persistence. Remove `state_import_url` and stop
+   the cloud instance. Retain the private snapshot/spec as rollback artifacts,
+   then retire the obsolete live resources using the sequence below.
 
 If import fails, the service stays stopped. Correct the private configuration or
 restore deliberately from a backup; never discard existing state to retry. The
@@ -98,4 +101,76 @@ core rejects an aggregation-policy change against an existing state history.
 Evidence-only tuning remains compatible. Keep independent policies/owners in
 separate deployments.
 
+## Packaging and updates
+
+`config.yaml` declares the HA options, architectures and published add-on image.
+`Dockerfile` starts from the core image pinned by digest and copies only the
+small `app/` startup wrapper. `app/options.py` converts allowlisted HA options
+into core settings. `app/run.py` prepares private state, optionally imports an
+empty state directory once, drops to UID/GID 1000 and execs the core's uvicorn.
+HA Supervisor manages install, boot, restart, update and backup.
+
+Core logic lives in `frigate-cma-events`; there is no second copy in this
+repository. Publish/test a core release, update the pinned digest, bump this
+add-on's `config.yaml` version and publish its image before updating HA. The
+workflow builds amd64/arm64, tests the option mapping and boots the actual image
+with Supervisor-style options to check health and state ownership.
+
+## Verification
+
+1. Verify both Relay and Pipeline are running, Relay targets this internal
+   `/ingest`, and its metadata source/heartbeat agrees with the policy.
+2. Read `healthz`, `api/status` and `api/pipeline` through the owner operator
+   route. Confirm the worker route cannot access `api/status` / `api/pipeline`.
+3. Use operator `POST api/replay` for isolated metadata checks: candidate rules,
+   duplicates and suppression. It must report zero model calls and persistent
+   writes. It does not exercise Relay/MQTT or deliver a worker event.
+4. Submit operator `POST api/validation` once when Frigate has a completed review
+   and retained history. Save the `integration_test_…` candidate ID. This uses one
+   historical frame/image, bypasses real trigger thresholds and queues CMA.
+   On an uncertain response, inspect existing deliveries before submitting again.
+5. Check the worker actually views the supplied image within its budget, performs
+   the configured destination write/readback, and posts `integration_test` to
+   `/results/{candidate_id}`. Independently read the destination and operator
+   `api/results/{candidate_id}`; a successful CMA admission/callback alone is
+   insufficient. Test records must not count as real application outcomes.
+6. Verify a normal real-source event separately. For dining, evaluate fixed
+   camera framing, detection/quiet-window behavior and dish visibility during
+   an actual meal. End-to-end plumbing does not prove recognition accuracy.
+
+Restart Pipeline and verify state/results/outbox persist. Its CMA pending count
+is separate from Relay's delivery backlog. Selected images are volatile cached
+artifacts; durable state and raw Frigate recordings have separate lifecycles.
+
+## Retiring a migrated cloud deployment or failed worker
+
+Keep the current Relay, Pipeline, ordinary node, worker, channel and required
+routing/delegation/operator services. Different credential roles pointing to
+one container are not redundant deployments.
+
+1. Privately save the source app spec, portable state export and relevant
+   destination readbacks. Confirm the local deployment has no bootstrap URL or
+   active route pointing to the source, and verify the local chain and restart.
+2. Back up the retired app's database before clearing its data. Check the exact
+   database and account scope, then verify no application collections remain.
+   Database-user removal alone does not remove stored data. Check the platform's
+   actual purge implementation rather than trusting its flag/response name.
+3. Delete the old cloud application, routes/secrets and database account using
+   supported platform operations. Read back that the app is absent. A stopped
+   zero-replica app is still a retained deployment record.
+4. For failed CMA attempts, verify their sandbox contains no active unrelated
+   agents and no current channel targets them. Stop/delete the retired Agent
+   and retire its dedicated sandbox through CMA lifecycle APIs. Observe actual
+   terminal states; acceptance is not completed cleanup. CMA may retain history
+   or tombstones according to its retention policy.
+5. Revoke manual keys proved exclusive to the removed cloud reader/failed
+   attempts. Leave current channel/delegation keys and unrelated credentials
+   intact. Let CMA retire its sandbox-managed key through its lifecycle.
+6. Update private active deployment records and NyxBot operational memory. Keep
+   backup/cleanup receipts clearly marked historical, with credential values
+   excluded from public documentation. Recheck current health, worker service
+   access and destination data after removal.
+
 The cloud deployment remains a supported upstream option for other installations.
+See the core [HA deployment guide](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/home-assistant.md)
+for shared credential roles and configuration mapping.

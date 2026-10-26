@@ -1,5 +1,9 @@
 # NyxID Node Home Assistant Add-on Implementation Plan
 
+> Historical design/build record. Some proposed provisioning and build steps
+> differ from the current implementation. Use [the current setup guide](../../../SETUP_GUIDE.md)
+> and checked-in schemas/scripts for installation and operation.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a Home Assistant Add-on that runs the NyxID credential node agent, enabling secure reverse-proxy access to Home Assistant and LAN services through NyxID.

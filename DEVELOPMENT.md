@@ -1,5 +1,9 @@
 # Development Guide — NyxID Node HA Add-on
 
+> Historical design/build record. Some proposed provisioning and build steps
+> differ from the current implementation. Use [the current setup guide](SETUP_GUIDE.md)
+> and checked-in schemas/scripts for installation and operation.
+
 This document records how this project was built from scratch, the decisions made along the way, the mistakes encountered, and how they were resolved. It serves as both a development tutorial and a reference for future contributors.
 
 ## Table of Contents
