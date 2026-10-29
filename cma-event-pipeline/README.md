@@ -193,6 +193,8 @@ immutable profile identity are required before retiring an idle Agent. Active
 work and approvals are preserved. Deletion is confirmed through resource readback.
 CMA retains audit records under its own retention; runtime cleanup does not
 erase the destination or pipeline results.
+The core excludes deleted inventory history and drains a bounded page per idle
+state; `context_cleanup.scan_limited` reports that later runs have more to scan.
 
 `api/status` reports cleanup health and pending/delivered/permanently failed CMA
 deliveries. A credential-free summary is logged every minute. Relay queue status
