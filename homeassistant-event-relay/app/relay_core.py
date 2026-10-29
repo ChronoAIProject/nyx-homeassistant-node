@@ -198,7 +198,8 @@ class SQLiteOutbox:
                 next_attempt REAL NOT NULL DEFAULT 0,
                 last_error TEXT,
                 dead INTEGER NOT NULL DEFAULT 0,
-                sent_at REAL
+                sent_at REAL,
+                created_at REAL NOT NULL DEFAULT 0
             );
             CREATE INDEX IF NOT EXISTS outbox_due_idx
                 ON outbox(sent_at, next_attempt, id);
@@ -207,6 +208,8 @@ class SQLiteOutbox:
         columns = {row[1] for row in self.db.execute("PRAGMA table_info(outbox)")}
         if "dead" not in columns:
             self.db.execute("ALTER TABLE outbox ADD COLUMN dead INTEGER NOT NULL DEFAULT 0")
+        if "created_at" not in columns:
+            self.db.execute("ALTER TABLE outbox ADD COLUMN created_at REAL NOT NULL DEFAULT 0")
         self.db.commit()
 
     def enqueue(self, dedupe_key: str, destination: str, body: bytes, content_type: str) -> bool:
@@ -220,9 +223,9 @@ class SQLiteOutbox:
                 raise RuntimeError("outbox capacity reached")
             cursor = self.db.execute(
                 """INSERT INTO outbox
-                   (dedupe_key, destination, body, content_type)
-                   VALUES (?, ?, ?, ?)""",
-                (dedupe_key, destination, body, content_type),
+                   (dedupe_key, destination, body, content_type, created_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (dedupe_key, destination, body, content_type, time.time()),
             )
         return cursor.rowcount == 1
 
@@ -265,6 +268,20 @@ class SQLiteOutbox:
                 (attempts, next_attempt, error[:1000], 0 if retryable else 1, row_id),
             )
 
+    def status(self, now: float | None = None) -> dict[str, Any]:
+        now = time.time() if now is None else now
+        with self.lock:
+            row = self.db.execute("""SELECT
+                count(*) AS total,
+                coalesce(sum(sent_at IS NULL AND dead=0),0) AS pending,
+                coalesce(sum(sent_at IS NULL AND dead=1),0) AS dead,
+                coalesce(sum(sent_at IS NOT NULL),0) AS delivered,
+                coalesce(sum(sent_at IS NULL AND dead=0 AND attempts>0),0) AS retrying,
+                min(CASE WHEN sent_at IS NULL AND dead=0 AND created_at>0 THEN created_at END) AS oldest
+                FROM outbox""").fetchone()
+            return {key: int(row[key]) for key in ("total", "pending", "dead", "delivered", "retrying")} | {
+                "oldest_pending_seconds": max(0, round(now-row["oldest"], 1)) if row["oldest"] is not None else None}
+
     def pending_count(self) -> int:
         with self.lock:
             return int(self.db.execute("SELECT count(*) FROM outbox WHERE sent_at IS NULL AND dead=0").fetchone()[0])
@@ -280,6 +297,9 @@ def parse_options(raw: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise ConfigurationError("options must be an object")
     options = dict(raw)
+    token = options.get("diagnostics_token", "")
+    if not isinstance(token, str) or (token and len(token) < 32):
+        raise ConfigurationError("diagnostics_token must be empty or at least 32 characters")
     for key in ("mqtt_sources", "ha_sources", "destinations", "routes"):
         value = options.get(key, [])
         if not isinstance(value, list):

@@ -146,3 +146,12 @@ for normal operation.
 - [Assistant project guide](CLAUDE.md) — implementation and release facts.
 - [Development history](DEVELOPMENT.md) and dated design documents — historical
   decisions; use current configuration/scripts for installation.
+
+The local event add-ons expose separate operator health: Pipeline `/api/status`
+uses its owner API token; Relay optionally enables an internal `/api/status`
+with a distinct diagnostic token. Both emit credential-free minute summaries.
+Independent candidate analysis uses a profile-managed CMA channel partitioned
+by event, with bounded idle runtime cleanup restricted to its dedicated
+workspace and pinned native profile. Sheets/callback state is business history; the
+previous Agent conversation is not reused as meal history. See each add-on's
+README for configuration and credential boundaries.

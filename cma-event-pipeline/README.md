@@ -174,3 +174,26 @@ one container are not redundant deployments.
 The cloud deployment remains a supported upstream option for other installations.
 See the core [HA deployment guide](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/home-assistant.md)
 for shared credential roles and configuration mapping.
+
+## Independent event contexts and health
+
+Use a CMA profile target with `partition.key: per_event` for independent analysis
+tasks. An `existing_agent` target intentionally reuses one native conversation,
+regardless of the gateway partition. Use a stable CloudEvent ID for delivery
+retries; store business results in the destination rather than prior context.
+
+Optional `cma_context_config` and separate `cma_context_token` configure the core's
+CMA resource cleanup. The JSON names an HTTPS public CMA API base (`cma_url`),
+the profile channel's immutable `agent_profile_ids` list and exclusive `workspace_id`, and
+`grace_seconds` (300–86400; default 600). Obtain these from the owner's actual
+channel and first native Agent. Never point it at a shared workspace or borrowed
+Agent. The token is a dedicated owner key restricted to the CMA service only;
+it stays on HA, outside the worker's service scope. Matching workspace AND
+immutable profile identity are required before retiring an idle Agent. Active
+work and approvals are preserved. Deletion is confirmed through resource readback.
+CMA retains audit records under its own retention; runtime cleanup does not
+erase the destination or pipeline results.
+
+`api/status` reports cleanup health and pending/delivered/permanently failed CMA
+deliveries. A credential-free summary is logged every minute. Relay queue status
+is separate; enable its owner-only diagnostic endpoint to inspect it directly.

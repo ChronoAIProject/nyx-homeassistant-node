@@ -1,6 +1,6 @@
 name: "CMA Event Pipeline"
 description: "Local configurable event aggregation, historical evidence selection and durable CMA delivery"
-version: "0.2.3"
+version: "0.2.4"
 slug: "cma-event-pipeline"
 stage: "experimental"
 url: "https://github.com/ChronoAIProject/nyx-homeassistant-node/tree/main/cma-event-pipeline"
@@ -19,6 +19,8 @@ options:
   worker_token: ""
   worker_service: ""
   worker_name: "CMA Event Pipeline"
+  cma_context_config: ""
+  cma_context_token: ""
   cma_event_url: ""
   cma_hmac_key_id: ""
   cma_hmac_secret: ""
@@ -35,6 +37,8 @@ schema:
   worker_token: password
   worker_service: str
   worker_name: str
+  cma_context_config: "str?"
+  cma_context_token: "password?"
   cma_event_url: str
   cma_hmac_key_id: str
   cma_hmac_secret: password
