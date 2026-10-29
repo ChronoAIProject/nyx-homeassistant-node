@@ -3,6 +3,7 @@ import json
 
 NAMES = (
     'relay_token', 'api_token', 'provider_token', 'worker_token', 'worker_service',
+    'cma_context_config', 'cma_context_token',
     'worker_name', 'cma_event_url', 'cma_hmac_key_id', 'cma_hmac_secret',
     'frigate_url', 'frigate_api_key', 'heartbeat_seconds', 'tick_seconds',
 )

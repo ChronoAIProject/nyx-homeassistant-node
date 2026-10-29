@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import copy
+import hmac
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from collections import deque
 import json
 import logging
@@ -58,11 +60,13 @@ class Relay:
         self.stop_event = threading.Event()
         self.rate_windows: dict[str, deque[float]] = {}
         self.rate_lock = threading.Lock()
+        self.workers = []
+        self.diagnostics_server = None
         self.delivery_thread = threading.Thread(target=self._deliver_loop, name="delivery", daemon=True)
 
     def start(self) -> None:
         self.delivery_thread.start()
-        workers = []
+        workers = self.workers
         for source in self.options.get("mqtt_sources", []):
             worker = MQTTSource(self, source)
             worker.start()
@@ -71,17 +75,53 @@ class Relay:
             worker = HomeAssistantSource(self, source)
             worker.start()
             workers.append(worker)
+        self._start_diagnostics()
         LOG.info("relay started with %d route(s), %d queued message(s)", len(self.routes), self.outbox.pending_count())
         try:
-            while not self.stop_event.wait(5):
-                pass
+            while not self.stop_event.is_set():
+                LOG.info("relay health %s", json.dumps(self.status(), sort_keys=True))
+                self.stop_event.wait(60)
         except KeyboardInterrupt:
             pass
         finally:
             self.stop_event.set()
             for worker in workers:
                 worker.stop()
+            if self.diagnostics_server is not None:
+                self.diagnostics_server.shutdown()
+                self.diagnostics_server.server_close()
+            self.delivery_thread.join(timeout=float(self.options.get("http_timeout_seconds", 15)) + 1)
             self.outbox.close()
+
+    def status(self) -> dict[str, Any]:
+        return {"queue": self.outbox.status(),
+                "delivery_alive": self.delivery_thread.is_alive(),
+                "sources": [{"kind": "mqtt" if isinstance(w, MQTTSource) else "homeassistant",
+                             "alive": w.is_alive(), "connected": w.connected.is_set()} for w in self.workers]}
+
+    def _start_diagnostics(self, address=("0.0.0.0", 8080)) -> None:
+        token = self.options.get("diagnostics_token", "")
+        if not token:
+            return
+        relay = self
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if not hmac.compare_digest(self.headers.get("Authorization", "").encode(), ("Bearer " + token).encode()):
+                    self.send_error(401)
+                    return
+                if self.path != "/api/status":
+                    self.send_error(404)
+                    return
+                body = json.dumps(relay.status(), sort_keys=True).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            def log_message(self, *args):
+                pass
+        self.diagnostics_server = ThreadingHTTPServer(address, Handler)
+        threading.Thread(target=self.diagnostics_server.serve_forever, name="diagnostics", daemon=True).start()
 
     def stop(self) -> None:
         self.stop_event.set()
@@ -149,10 +189,10 @@ class Relay:
                 LOG.warning("delivery failed destination=%s status=%d retryable=%s", message.destination, exc.code, retryable)
             except (URLError, TimeoutError, OSError) as exc:
                 self.outbox.mark_failed(message.row_id, str(exc), retryable=True)
-                LOG.warning("delivery unavailable destination=%s error=%s", message.destination, exc)
+                LOG.warning("delivery unavailable destination=%s error=%s", message.destination, type(exc).__name__)
             except Exception as exc:  # keep the relay alive on a malformed destination
                 self.outbox.mark_failed(message.row_id, str(exc), retryable=False)
-                LOG.error("delivery failed destination=%s error=%s", message.destination, exc)
+                LOG.error("delivery failed destination=%s error=%s", message.destination, type(exc).__name__)
             else:
                 self.outbox.mark_sent(message.row_id)
                 LOG.debug("delivered destination=%s", message.destination)
@@ -202,7 +242,7 @@ class MQTTSource(threading.Thread):
                 client.connect(str(self.config.get("host", "core-mosquitto")), int(self.config.get("port", 1883)), 60)
                 client.loop_forever(retry_first_connection=True)
             except Exception as exc:
-                LOG.warning("MQTT source %s unavailable: %s", self.config["id"], exc)
+                LOG.warning("MQTT source %s unavailable: %s", self.config["id"], type(exc).__name__)
                 self.relay.stop_event.wait(5)
             finally:
                 self.connected.clear()
@@ -294,6 +334,7 @@ class HomeAssistantSource(threading.Thread):
         self.relay = relay
         self.config = config
         self.socket = None
+        self.connected = threading.Event()
 
     def run(self) -> None:
         try:
@@ -317,11 +358,13 @@ class HomeAssistantSource(threading.Thread):
                     header=[f"Authorization: Bearer {token}"],
                 )
                 self._subscribe(event_types)
+                self.connected.set()
                 self._read_loop()
             except Exception as exc:
-                LOG.warning("HA source %s unavailable: %s", self.config["id"], exc)
+                LOG.warning("HA source %s unavailable: %s", self.config["id"], type(exc).__name__)
                 self.relay.stop_event.wait(5)
             finally:
+                self.connected.clear()
                 if self.socket is not None:
                     try:
                         self.socket.close()

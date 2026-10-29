@@ -139,3 +139,15 @@ has no external side effects; explicit integration validation exercises its
 outbound CMA/worker path and bypasses MQTT admission. A real source event is
 needed to validate that upstream path. See the [Pipeline runbook](../cma-event-pipeline/README.md)
 for the full test and cleanup sequence.
+
+## Diagnostics
+
+A credential-free health summary is logged at startup and every 60 seconds,
+including queue pending/dead/retrying/delivered counts and source connection
+state. It contains no events, credentials, upstream bodies or destination URLs.
+Set an optional distinct `diagnostics_token` (32+ characters) to enable the
+read-only `GET /api/status` listener on internal port 8080. It requires bearer
+authentication. Access it through an owner-only NyxID node route; no host port
+is published. Empty token disables the listener. Dead entries remain visible
+and consume queue capacity; they are not silently discarded or retried. Existing
+queue entries without a creation timestamp have unknown pending age.
