@@ -16,7 +16,7 @@ def environment(options, data_dir):
     if not isinstance(pipeline, dict):
         raise ValueError('pipeline_config must contain a JSON object')
     env = {name.upper(): str(options[name]) for name in NAMES if name in options and options[name] != ''}
-    env.update(PIPELINE_CONFIG_JSON=json.dumps(pipeline, ensure_ascii=False), DATA_DIR=str(data_dir))
+    env.update(PIPELINE_CONFIG_JSON=json.dumps(pipeline, ensure_ascii=False), DATA_DIR=str(data_dir), HA_INGRESS="true")
     # This deployment always uses local durable SQLite. Options cannot override
     # MongoDB, data paths, arbitrary env, paused-source state or Python settings.
     return env

@@ -17,6 +17,7 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 def main():
+    os.umask(0o077)
     state = Path('/data/state')
     state.mkdir(mode=0o700, parents=True, exist_ok=True)
     if state.is_symlink():
@@ -53,7 +54,7 @@ def main():
         print('Restored %d pipeline database(s) into local storage.' % count, flush=True)
     os.chdir('/app')
     os.execv('/app/.venv/bin/uvicorn', [
-        'uvicorn', 'service:app', '--host', '0.0.0.0', '--port', '8080', '--no-access-log',
+        'uvicorn', 'service:app', '--host', '0.0.0.0', '--port', '8080', '--no-access-log', '--no-proxy-headers',
     ])
 
 

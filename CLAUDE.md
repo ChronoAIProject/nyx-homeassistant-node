@@ -14,7 +14,7 @@ For the full narrative / deeper architecture, see [`docs/ARCHITECTURE_NOTES.md`]
 | `nyxid-node/` | `homeassistant_api: true` — HA Core REST only | Always installed. Main pipe between NyxID and HA. |
 | `nyxid-node-admin/` | adds `hassio_api: true` + `hassio_role: admin` | Temporary. Install only when you need Supervisor-level ops (install add-ons, manage host). **Uninstalling = physical revocation** of admin capability. |
 | homeassistant-event-relay/ | homeassistant_api: true — selected HA Event Bus and MQTT sources | Optional. Explicit routes only; persists an outbox in /data; HTTPS by default, explicit trusted local HTTP supported. |
-| cma-event-pipeline/ | No HA/Supervisor API permission or host ports | Optional local generic aggregation/evidence service; upstream core is pinned, state lives in /data/state. |
+| cma-event-pipeline/ | No HA/Supervisor API permission or host ports | Video Event Monitor: HA Ingress page + owner rule API, persistent versioned rules; pinned upstream core, state in /data/state. |
 
 The ordinary node attempts automatic service provisioning when `ha_service_slug` is empty and `ha_service_label` is set. An explicit slug skips service-management API calls. The current admin variant requires an owner-created `supervisor_service_slug` and only pushes its local credential; it does not auto-create a service.
 
@@ -236,3 +236,10 @@ by event, with bounded idle runtime cleanup restricted to its dedicated
 workspace and pinned native profile. Sheets/callback state is business history; the
 previous Agent conversation is not reused as meal history. See each add-on's
 README for configuration and credential boundaries.
+
+Core 0.3 imports the startup policy once as default v1, then uses the local rule
+registry as authority. Preserve the complete registry and revision directories
+on upgrade; legacy portable exports cannot represent multi-rule state. HA
+Ingress trusts only the direct Supervisor peer and authenticated user headers;
+the launcher disables forwarded-IP parsing. Rule edits isolate state, pause
+retired outboxes and retain callbacks. New rules are disabled/delivery-off.
