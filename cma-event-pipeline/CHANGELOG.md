@@ -1,3 +1,10 @@
+# 0.3.0-alpha.2
+
+- Accept JSON `expected_revision` for owner rule updates/archive when a proxy
+  strips `If-Match`. Preserve atomic revision checks and credential boundaries.
+- Send both header and body preconditions from the management page. Reject
+  conflicts and invalid versions; stale writes still return 409.
+
 # 0.3.0-alpha.1
 
 - Rename the displayed add-on to Video Event Monitor; preserve its installed

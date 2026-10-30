@@ -88,8 +88,10 @@ restaurant workflow unchanged.
 The page provides camera discovery, advanced JSON, copy/archive, version history
 and recent decisions/results. There are 32 rule IDs and 256 total revisions;
 archive retains data. Use the owner-only `api/rules` CRUD/history API for scripts.
-Updates/archive require `If-Match` with the current revision (428 when missing,
-409 when stale). Relay/worker/provider credentials cannot edit rules. The full
+Updates/archive require `If-Match` or an integer JSON `expected_revision`
+with the current revision (428 when both are missing, 409 when stale).
+The body form supports proxies that omit conditional headers; if both are sent,
+they must agree. Relay/worker/provider credentials cannot edit rules. The full
 [management and API guide](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/monitoring.md)
 describes paths, migration and lifecycle behavior.
 
