@@ -1,3 +1,13 @@
+# 0.3.0-alpha.3
+
+- Distinguish skipped/local-only events, paused/queued/retrying/failed delivery,
+  CMA acceptance awaiting a callback, and actual worker results in history.
+  Missing callbacks are not treated as failures; synthetic tests stay distinct.
+- Add a Chinese/English selector for the management page, including status
+  reasons, actions, confirmations and errors. Default to the browser language
+  and preserve unsaved rule edits when switching. Revalidate UI assets on reload.
+- Pin core 0.3.2; preserve all existing rules, revisions, results and queues.
+
 # 0.3.0-alpha.2
 
 - Accept JSON `expected_revision` for owner rule updates/archive when a proxy

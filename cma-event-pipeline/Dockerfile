@@ -1,5 +1,5 @@
 # Pinned to a tested upstream core; both architectures use the same implementation.
-ARG BUILD_FROM=ghcr.io/chronoaiproject/frigate-cma-events@sha256:1da270611b6a94ae7f5036aa492051eaa4c96f4e990dfe80e5e007d5cbe0bc0d
+ARG BUILD_FROM=ghcr.io/chronoaiproject/frigate-cma-events@sha256:fc7188f3434ed2ce3f6fef47489cc0a33613c00c38f210154d8c2f7b27b3725a
 FROM ${BUILD_FROM}
 USER root
 COPY app /addon

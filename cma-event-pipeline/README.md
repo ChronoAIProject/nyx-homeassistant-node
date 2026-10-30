@@ -71,6 +71,11 @@ Open **Settings → Add-ons → Video Event Monitor → Open web UI**. The panel
 HA's admin-only Ingress; API credentials are not embedded in the page and no host
 port is published. Create a rule by camera, labels/zone, duration, grouping,
 cooldown, daily cap and evidence crop, or edit the full declarative JSON.
+The page supports Chinese and English with an in-page language selector; its
+initial language follows the browser. Switching preserves unsaved edits.
+History separates skipped events, local observation, delivery progress/errors,
+awaiting callbacks and actual worker results. Missing callbacks alone are not
+analysis failures. API state codes remain language independent.
 New rules default to disabled with CMA delivery off. Enable local observation,
 review recent decisions, then enable delivery when the channel/worker supports
 that rule's event type. A deployment currently has one configured CMA destination
