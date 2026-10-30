@@ -1,4 +1,4 @@
-# CMA Event Pipeline — local Home Assistant add-on
+# Video Event Monitor — local Home Assistant add-on
 
 Run the generic [CMA Event Pipeline](https://github.com/ChronoAIProject/frigate-cma-events)
 beside Home Assistant and Frigate. The upstream repository owns the aggregation,
@@ -18,11 +18,12 @@ HA / MQTT -> HA Event Relay -> this add-on /ingest
 
 ## Installation and configuration
 
-1. Add this repository to the HA add-on store and install **CMA Event Pipeline**.
+1. Add this repository to the HA add-on store and install **Video Event Monitor** (the existing `cma-event-pipeline` slug).
 2. Copy a fully resolved private JSON policy into `pipeline_config`. Use the
    upstream [configuration guide](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/pipeline.md)
-   and dining, HA-state or driveway examples. A deployment has one policy and
-   may handle many entity subjects. Do not commit installation data.
+   and dining, HA-state or driveway examples. This imports `default` v1 once;
+   after startup, manage multiple persistent rules in **Open web UI**.
+   Do not commit installation data.
 3. Set distinct random `relay_token`, `api_token`, `provider_token` and
    `worker_token` strings, each at least 32 characters. The provider token is
    reserved for the optional provider API. `worker_token` grants evidence and
@@ -64,6 +65,41 @@ Leave CMA-managed keys unchanged so its renewal contract remains valid. Keep
 the delegate private, record its expiry, and rotate it through the original
 service credential before expiry. Verify both proxy layers with the worker.
 
+## Rule management
+
+Open **Settings → Add-ons → Video Event Monitor → Open web UI**. The panel uses
+HA's admin-only Ingress; API credentials are not embedded in the page and no host
+port is published. Create a rule by camera, labels/zone, duration, grouping,
+cooldown, daily cap and evidence crop, or edit the full declarative JSON.
+New rules default to disabled with CMA delivery off. Enable local observation,
+review recent decisions, then enable delivery when the channel/worker supports
+that rule's event type. A deployment currently has one configured CMA destination
+and worker credential; it does not automatically provision new workers.
+
+Rules persist in `/data/state/monitoring.sqlite3`. Each edit or enable/disable
+creates an immutable revision with independent windows and counters. Old queues
+are paused, history and callbacks remain available. Activities that started
+before the new revision are ignored, so edit during quiet periods when continuity
+matters. Startup `pipeline_config` is bootstrap-only after import; change rules
+in the page/API. Credentials, connection URLs and timers still use private HA
+options and a restart. Preserve the original default rule to retain the existing
+restaurant workflow unchanged.
+
+The page provides camera discovery, advanced JSON, copy/archive, version history
+and recent decisions/results. There are 32 rule IDs and 256 total revisions;
+archive retains data. Use the owner-only `api/rules` CRUD/history API for scripts.
+Updates/archive require `If-Match` with the current revision (428 when missing,
+409 when stale). Relay/worker/provider credentials cannot edit rules. The full
+[management and API guide](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/monitoring.md)
+describes paths, migration and lifecycle behavior.
+
+For all camera rules to receive input, Relay must forward all Frigate review
+subjects plus a separate shared-bridge heartbeat with `subject: "*"` and the
+same source URI. The service filters events per rule. A local Frigate URL enables
+review repair even when a rule does not collect images. Unmatched events do not
+trigger CMA work. Original `/evidence`, `/results` and `/api/pipeline` paths stay
+pinned to imported default v1; new events carry versioned callback paths.
+
 ## Persistence and migration
 
 SQLite databases live under `/data/state`, owned by the unprivileged runtime
@@ -96,13 +132,13 @@ To move an existing cloud deployment:
    then retire the obsolete live resources using the sequence below.
 
 If import fails, the service stays stopped. Correct the private configuration or
-restore deliberately from a backup; never discard existing state to retry. The
-core rejects an aggregation-policy change against an existing state history.
-Evidence-only tuning remains compatible. Keep independent policies/owners in
-separate deployments.
+restore deliberately from a backup; never discard existing state to retry.
+Managed edits create separate revision state. Keep separate owners/credentials
+in separate deployments. After managed revisions exist, use a full HA add-on
+backup; the legacy portable state export refuses to omit the rule registry.
 
-Core 0.2.5 reserves intermediate temporal observations before visual
-deduplication. In the private `pipeline_config`, set
+The core reserves intermediate temporal observations before visual
+deduplication. In the rule editor, set
 `evidence.options.max_selected_gap_seconds` to the desired maximum observation
 gap (default 300 seconds; 0 disables). This shares the existing source-frame,
 selected-frame and image budgets. Check `coverage.temporal` and its warnings:

@@ -14,8 +14,9 @@ class OptionsTests(unittest.TestCase):
         result = options.environment({'pipeline_config': '{"version":1}', 'relay_token':'synthetic-secret',
                                       'tick_seconds':5,'frigate_url':'http://example-frigate:5000',
                                       'mongodb_uri':'must-not-be-used','data_dir':'/other',
-                                      'processing_enabled':False,'pythonpath':'/injected'}, '/data/state')
+                                      'processing_enabled':False,'pythonpath':'/injected','ha_ingress':False}, '/data/state')
         self.assertEqual(result['DATA_DIR'], '/data/state')
+        self.assertEqual(result['HA_INGRESS'], 'true')
         self.assertEqual(result['RELAY_TOKEN'], 'synthetic-secret')
         self.assertEqual(result['TICK_SECONDS'], '5')
         self.assertEqual(result['FRIGATE_URL'], 'http://example-frigate:5000')

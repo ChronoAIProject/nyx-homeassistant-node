@@ -9,7 +9,7 @@ four independent add-ons for amd64 and aarch64:
 | **NyxID Node** | Proxy Home Assistant and selected LAN services through an outbound NyxID connection | HA Core API; host network; persistent node identity/credentials in `/data` |
 | **NyxID Node (Admin)** | Temporary Supervisor management | Supervisor admin; install only for management work |
 | **Home Assistant Event Relay** | Filter selected MQTT / HA events and reliably forward CloudEvents | HA Core API; persistent SQLite outbox in `/data` |
-| **CMA Event Pipeline** | Aggregate, deduplicate, limit and select bounded historical evidence, then deliver candidates to CMA | No HA/Supervisor API permission or host ports; SQLite in `/data/state` |
+| **Video Event Monitor** (CMA Event Pipeline slug) | Manage persistent monitoring rules in an HA page/API; aggregate events, select bounded evidence and deliver candidates to CMA | No HA/Supervisor API permission or host ports; SQLite in `/data/state` |
 
 ## Installation
 

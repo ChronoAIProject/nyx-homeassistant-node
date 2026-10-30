@@ -1,6 +1,6 @@
-name: "CMA Event Pipeline"
-description: "Local configurable event aggregation, historical evidence selection and durable CMA delivery"
-version: "0.2.6"
+name: "Video Event Monitor"
+description: "Configurable video monitoring rules, local history, bounded evidence and CMA delivery"
+version: "0.3.0-alpha.1"
 slug: "cma-event-pipeline"
 stage: "experimental"
 url: "https://github.com/ChronoAIProject/nyx-homeassistant-node/tree/main/cma-event-pipeline"
@@ -10,6 +10,11 @@ arch:
   - amd64
   - aarch64
 init: false
+ingress: true
+ingress_port: 8080
+panel_icon: mdi:cctv
+panel_title: Video Monitor
+panel_admin: true
 image: "ghcr.io/chronoaiproject/nyx-homeassistant-cma-event-pipeline"
 options:
   pipeline_config: ""
@@ -18,7 +23,7 @@ options:
   provider_token: ""
   worker_token: ""
   worker_service: ""
-  worker_name: "CMA Event Pipeline"
+  worker_name: "Video Event Monitor"
   cma_context_config: ""
   cma_context_token: ""
   cma_event_url: ""
