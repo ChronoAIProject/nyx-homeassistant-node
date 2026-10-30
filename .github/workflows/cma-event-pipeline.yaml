@@ -68,6 +68,7 @@ jobs:
               test "$(stat -c %u "$pipeline_test_dir/state")" = 1000
               curl --fail --silent http://127.0.0.1:18080/ | grep -q 'ui/app.js'
               curl --fail --silent http://127.0.0.1:18080/ui/app.js > /dev/null
+              curl --fail --silent http://127.0.0.1:18080/ui/i18n.js > /dev/null
               curl --fail --silent -H "Authorization: Bearer $(python -c 'print("a"*48)')" http://127.0.0.1:18080/api/rules | python -c 'import json,sys; assert json.load(sys.stdin)["rules"][0]["id"] == "default"'
               test "$(curl --silent --output /dev/null --write-out '%{http_code}' -H 'X-Forwarded-For: 172.30.32.2' -H 'X-Remote-User-Id: forged' -H 'X-Ingress-Path: /api/hassio_ingress/forged' http://127.0.0.1:18080/api/rules)" = 401
               exit 0
