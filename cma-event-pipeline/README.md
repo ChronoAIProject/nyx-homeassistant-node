@@ -101,6 +101,14 @@ core rejects an aggregation-policy change against an existing state history.
 Evidence-only tuning remains compatible. Keep independent policies/owners in
 separate deployments.
 
+Core 0.2.5 reserves intermediate temporal observations before visual
+deduplication. In the private `pipeline_config`, set
+`evidence.options.max_selected_gap_seconds` to the desired maximum observation
+gap (default 300 seconds; 0 disables). This shares the existing source-frame,
+selected-frame and image budgets. Check `coverage.temporal` and its warnings:
+missing recordings, quality filtering or the budget can prevent the target.
+Temporal coverage does not establish a real-world outcome.
+
 ## Packaging and updates
 
 `config.yaml` declares the HA options, architectures and published add-on image.
