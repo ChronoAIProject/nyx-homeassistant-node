@@ -30,7 +30,7 @@ From this repository, prepare a separate backup for the renamed installation:
 
 ```sh
 python3 scripts/migrate_monitor_backup.py /private/old-monitor.tar \
-  /private/video-event-monitor.tar --target-version 0.3.0-alpha.4 \
+  /private/video-event-monitor.tar --target-version 0.3.0-alpha.5 \
   > /private/migration-report.json
 ```
 
