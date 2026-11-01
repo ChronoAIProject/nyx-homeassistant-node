@@ -1,11 +1,17 @@
 # CLAUDE.md — project guide for AI assistants
 
 This repo ships four independent Home Assistant add-ons: the ordinary and
-temporary admin NyxID nodes, Event Relay, and local CMA Event Pipeline. Before making changes, skim this file top to
+temporary admin NyxID nodes, Event Relay, and local Video Event Monitor. Before making changes, skim this file top to
 bottom — it captures the non-obvious bits that cost the last session hours to
 re-discover.
 
 For the full narrative / deeper architecture, see [`docs/ARCHITECTURE_NOTES.md`](docs/ARCHITECTURE_NOTES.md). This file is the quick reference.
+
+For the current component map and cross-platform update procedure, use the
+[deployment overview](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
+([中文](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md)).
+Use **Video Event Monitor** in prose; `cma-event-pipeline` is the stable HA slug
+and `frigate-cma-events` the core repository/image, all for one monitoring app.
 
 ## What ships
 
@@ -108,8 +114,8 @@ nyxid proxy request <lan-node-slug> "api/hassio/addons/8404a721_nyxid-node-admin
 
 ### Release process
 
-The following version coupling is for the two node images. Relay and Pipeline
-have independent config versions and publish workflows. Pipeline pins the
+The following version coupling is for the two node images. Relay and Monitor
+have independent config versions and publish workflows. Monitor pins the
 upstream `frigate-cma-events` core by immutable digest; do not copy core logic
 into the HA packaging. Its CI includes an actual options/startup/UID smoke test.
 
@@ -178,6 +184,7 @@ over `/api/websocket` with an admin LLAT.
 
 ## Pointers
 
+- [Deployment ownership and updates](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md) — names, event chain, configuration authority and rollout matrix
 - `docs/ARCHITECTURE_NOTES.md` — full architecture reference, HA auth model deep dive, design rationale
 - `DEVELOPMENT.md` — chronological build history up to v1.0.0
 - `SETUP_GUIDE.md` — user-facing install walkthrough
@@ -208,13 +215,13 @@ gh run list --limit 3
 ## Local event processing and cleanup
 
 The current supported topology is Frigate/MQTT or selected HA events → Relay →
-local Pipeline → signed CMA channel → worker/destination. Pipeline uses local
+local Monitor → signed CMA channel → worker/destination. Monitor uses local
 Frigate access and SQLite `/data/state`; raw recordings stay with Frigate.
-CMA/NyxBot remain remote and receive selected evidence. Relay, Pipeline and the
+CMA/NyxBot remain remote and receive selected evidence. Relay, Monitor and the
 ordinary credential node are independent containers; neither event add-on needs
 Supervisor admin for normal operation.
 
-Worker, delegated node and operator NyxID entries can point to one Pipeline
+Worker, delegated node and operator NyxID entries can point to one Monitor
 instance with different credentials. They are required routing/auth boundaries,
 not duplicate deployments. CMA managed keys currently cannot retain node grants
 ([#1111](https://github.com/ChronoAIProject/cma/issues/1111)); use the explicit
@@ -225,10 +232,10 @@ Retire cloud apps/databases and failed worker attempts only after verifying the
 local chain, state and downstream rows. Save private exports/specs before removal,
 verify database data removal separately from deleting its user, and revoke only
 credentials proved exclusive to retired resources. Do not publish site resource
-IDs, media, installation history or cleanup receipts. See the Pipeline guide for
+IDs, media, installation history or cleanup receipts. See the Monitor guide for
 the full checklist.
 
-The local event add-ons expose separate operator health: Pipeline `/api/status`
+The local event add-ons expose separate operator health: Monitor `/api/status`
 uses its owner API token; Relay optionally enables an internal `/api/status`
 with a distinct diagnostic token. Both emit credential-free minute summaries.
 Independent candidate analysis uses a profile-managed CMA channel partitioned
@@ -243,3 +250,13 @@ on upgrade; legacy portable exports cannot represent multi-rule state. HA
 Ingress trusts only the direct Supervisor peer and authenticated user headers;
 the launcher disables forwarded-IP parsing. Rule edits isolate state, pause
 retired outboxes and retain callbacks. New rules are disabled/delivery-off.
+
+Report updates by layer: local rules, startup options, installed image, CMA
+profile/channel, and NyxID notification receiver. Rule edits apply live; startup
+option edits need the affected add-on restarted. Core/UI changes need a new core
+digest, HA wrapper version/image and installed upgrade. Worker template edits
+need applying to CMA; optional verified completion notifications run there and
+use an existing NyxID webhook/NyxBot with a fixed chat. Check native receipts and
+stable-ID deduplication. Keep production settings and one active inventory
+private. No single deploy command or HA page synchronizes every platform yet;
+a PR merge or CI image publication alone is not a completed deployment.

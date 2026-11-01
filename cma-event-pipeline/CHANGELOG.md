@@ -1,3 +1,9 @@
+# Video Event Monitor release history
+
+The stable slug remains `cma-event-pipeline`. Core and HA package versions are
+separate; a worker/profile or documentation update does not imply a new installed
+add-on version. See [packaging and updates](README.md#packaging-and-updates).
+
 # 0.3.0-alpha.3
 
 - Distinguish skipped/local-only events, paused/queued/retrying/failed delivery,
