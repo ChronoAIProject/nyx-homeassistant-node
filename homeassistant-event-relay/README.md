@@ -1,8 +1,8 @@
 # Home Assistant Event Relay
 
-This is the event transport for [Video Event Monitor](../cma-event-pipeline/README.md).
-See the [architecture/deployment guide](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
-([中文](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md))
+This is the event transport for [Video Event Monitor](../video-event-monitor/README.md).
+See the [architecture/deployment guide](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md)
+([中文](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.zh-CN.md))
 for component locations, configuration owners and update boundaries.
 
 This add-on is a configurable, local event relay. It can subscribe to selected
@@ -19,7 +19,7 @@ Assistant until a route is configured. Destination URLs use HTTPS by default and
 credentials are add-on password options. The SQLite outbox is kept in `/data`
 and retries transient delivery failures after restarts.
 
-For a trusted local add-on such as [Video Event Monitor](../cma-event-pipeline/README.md),
+For a trusted local add-on such as [Video Event Monitor](../video-event-monitor/README.md),
 set a destination's `allow_local_http: true` explicitly. HTTP is then accepted
 only for a private IP or a Supervisor add-on hostname (`core-…`, `local-…` or
 the repository hash prefix), with the normal bearer credential. Public HTTP,
@@ -61,7 +61,7 @@ ha_sources:
 
 destinations:
   - id: pipeline_ingest
-    url: http://0123abcd-cma-event-pipeline:8080/ingest
+    url: http://0123abcd-video-event-monitor:8080/ingest
     allow_local_http: true
     auth_type: bearer
     auth_token: <configured-in-HA>
@@ -122,7 +122,7 @@ are applied in CMA and do not require upgrading Relay.
 
 ## End-to-end application example
 
-The [dining review reference application](https://github.com/ChronoAIProject/frigate-cma-events/tree/main/examples/dining)
+The [dining review reference application](https://github.com/ChronoAIProject/video-event-monitor/tree/main/examples/dining)
 connects this relay to local HA aggregation, a bounded historical image
 endpoint, a CMA visual worker and Google Sheets. The application also supports
 cloud aggregation as an alternative. Its walkthrough covers private
@@ -147,7 +147,7 @@ Verify actual delivery and downstream candidate/result processing before
 removing a retired destination or cloud application. A synthetic Monitor replay
 has no external side effects; explicit integration validation exercises its
 outbound CMA/worker path and bypasses MQTT admission. A real source event is
-needed to validate that upstream path. See the [Monitor runbook](../cma-event-pipeline/README.md)
+needed to validate that upstream path. See the [Monitor runbook](../video-event-monitor/README.md)
 for the full test and cleanup sequence.
 
 ## Diagnostics

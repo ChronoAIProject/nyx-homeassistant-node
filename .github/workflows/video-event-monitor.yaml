@@ -1,10 +1,10 @@
-name: Build CMA Event Pipeline add-on
+name: Build Video Event Monitor add-on
 on:
   push:
     branches: [main]
-    paths: ['cma-event-pipeline/**', '.github/workflows/cma-event-pipeline.yaml']
+    paths: ['video-event-monitor/**', '.github/workflows/video-event-monitor.yaml', 'scripts/migrate_monitor_backup.py', 'tests/test_monitor_backup_migration.py']
   pull_request:
-    paths: ['cma-event-pipeline/**', '.github/workflows/cma-event-pipeline.yaml']
+    paths: ['video-event-monitor/**', '.github/workflows/video-event-monitor.yaml', 'scripts/migrate_monitor_backup.py', 'tests/test_monitor_backup_migration.py']
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,8 +16,9 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - run: python -m unittest discover -s cma-event-pipeline/tests -v
-      - run: python -m py_compile cma-event-pipeline/app/*.py
+      - run: python -m unittest discover -s video-event-monitor/tests -v
+      - run: python -m unittest discover -s tests -v
+      - run: python -m py_compile video-event-monitor/app/*.py
   publish:
     if: github.event_name != 'pull_request'
     needs: test
@@ -36,14 +37,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: version
         run: |
-          version=$(awk '/^version:/ {gsub(/"/, "", $2); print $2}' cma-event-pipeline/config.yaml)
+          version=$(awk '/^version:/ {gsub(/"/, "", $2); print $2}' video-event-monitor/config.yaml)
           echo "value=$version" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v7
         with:
-          context: cma-event-pipeline
+          context: video-event-monitor
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/chronoaiproject/nyx-homeassistant-cma-event-pipeline:${{ steps.version.outputs.value }}
+          tags: ghcr.io/chronoaiproject/video-event-monitor-ha:${{ steps.version.outputs.value }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Verify packaged runtime starts with HA options and private SQLite
@@ -60,7 +61,7 @@ jobs:
                      'provider_token':'p'*48,'relay_token':'r'*48,'worker_token':'w'*48}
           Path(sys.argv[1],'options.json').write_text(json.dumps(options))
           PY
-          image="ghcr.io/chronoaiproject/nyx-homeassistant-cma-event-pipeline:${{ steps.version.outputs.value }}"
+          image="ghcr.io/chronoaiproject/video-event-monitor-ha:${{ steps.version.outputs.value }}"
           docker run -d --name pipeline-smoke -p 127.0.0.1:18080:8080 -v "$pipeline_test_dir:/data" "$image"
           trap 'docker logs pipeline-smoke; docker rm -f pipeline-smoke' EXIT
           for attempt in {1..20}; do

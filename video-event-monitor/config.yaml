@@ -1,9 +1,9 @@
 name: "Video Event Monitor"
 description: "Configurable video monitoring rules, local history, bounded evidence and CMA delivery"
-version: "0.3.0-alpha.3"
-slug: "cma-event-pipeline"
+version: "0.3.0-alpha.4"
+slug: "video-event-monitor"
 stage: "experimental"
-url: "https://github.com/ChronoAIProject/nyx-homeassistant-node/tree/main/cma-event-pipeline"
+url: "https://github.com/ChronoAIProject/nyx-homeassistant-node/tree/main/video-event-monitor"
 startup: "application"
 boot: "auto"
 arch:
@@ -13,9 +13,9 @@ init: false
 ingress: true
 ingress_port: 8080
 panel_icon: mdi:cctv
-panel_title: Video Monitor
+panel_title: Video Event Monitor
 panel_admin: true
-image: "ghcr.io/chronoaiproject/nyx-homeassistant-cma-event-pipeline"
+image: "ghcr.io/chronoaiproject/video-event-monitor-ha"
 options:
   pipeline_config: ""
   relay_token: ""

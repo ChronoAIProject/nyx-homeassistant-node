@@ -5,10 +5,10 @@ Reference doc for future contributors (humans or AI assistants). Covers what's e
 Organized as reference, not narrative. For the chronological "how we built this" see [DEVELOPMENT.md](../DEVELOPMENT.md).
 
 For current naming, component locations, configuration authority and updates,
-start with the [shared deployment guide](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
-([中文](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md)).
-Video Event Monitor is the HA display name, `cma-event-pipeline` its stable slug,
-and `frigate-cma-events` the core repository/image running inside that add-on.
+start with the [shared deployment guide](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md)
+([中文](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.zh-CN.md)).
+Video Event Monitor is the HA display name, `video-event-monitor` its stable slug,
+and `video-event-monitor` the core repository/image running inside that add-on.
 
 ---
 
@@ -347,9 +347,9 @@ a new thread in the existing NyxBot, independently reads the stored result and
 delivers to a fixed authorized chat. Completion events carry record references;
 the receiver durably deduplicates stable IDs. This receiver is separate platform
 configuration; no additional aggregation app is involved. See the
-[dining notification contract](https://github.com/ChronoAIProject/frigate-cma-events/tree/main/examples/dining#optional-completion-summaries).
+[dining notification contract](https://github.com/ChronoAIProject/video-event-monitor/tree/main/examples/dining#optional-completion-summaries).
 
-The HA wrapper pins the generic core image from `frigate-cma-events`, reads
+The HA wrapper pins the generic core image from `video-event-monitor`, reads
 allowlisted HA options, creates `/data/state`, drops to UID 1000, and execs the
 core. It has no HA/Supervisor API permission, host network or published host port.
 Its credentials remain in HA options/backups; SQLite persists across updates.
@@ -367,7 +367,7 @@ Once a local migration passes persistence, evidence and destination verification
 retire the old app and its database, then unused credentials and failed worker
 attempts. Retain private portable exports/specs rather than a live rollback app.
 Database-user deletion alone does not prove data was removed; check the platform's
-actual purge behavior. The [Monitor runbook](../cma-event-pipeline/README.md)
+actual purge behavior. The [Monitor runbook](../video-event-monitor/README.md)
 describes verification and retirement.
 
 ### Configuration and update ownership
@@ -382,7 +382,7 @@ Runtime/UI changes require a published core digest, an updated HA pin/version,
 a published HA image and an installed add-on upgrade. Documentation changes do
 not upgrade running code. A new channel can have a new dedicated workspace and
 native profile; update HA cleanup pins when switching. The
-[rollout matrix](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md#which-changes-need-an-ha-upgrade)
+[rollout matrix](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md#which-changes-need-an-ha-upgrade)
 is the shared operational reference. There is no single cross-platform deploy
 command yet. Keep one private inventory of actual deployed versions/configuration
 and clearly separate old backup/history from the active installation.
