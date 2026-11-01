@@ -1,8 +1,16 @@
 # Video Event Monitor release history
 
-The stable slug remains `cma-event-pipeline`. Core and HA package versions are
+The current slug is `video-event-monitor`. Core and HA package versions are
 separate; a worker/profile or documentation update does not imply a new installed
 add-on version. See [packaging and updates](README.md#packaging-and-updates).
+
+# 0.3.0-alpha.4
+
+- Unify the repository references, image packages, add-on directory/slug, panel
+  title and runtime messages under Video Event Monitor / `video-event-monitor`.
+- Pin core 0.3.3. This changes the HA installation identity: use the
+  [complete-state migration procedure](../docs/monitor-identity-migration.md),
+  verify rules/history and switch Relay/node targets before retiring the old add-on.
 
 # 0.3.0-alpha.3
 

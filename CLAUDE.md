@@ -8,10 +8,10 @@ re-discover.
 For the full narrative / deeper architecture, see [`docs/ARCHITECTURE_NOTES.md`](docs/ARCHITECTURE_NOTES.md). This file is the quick reference.
 
 For the current component map and cross-platform update procedure, use the
-[deployment overview](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
-([中文](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md)).
-Use **Video Event Monitor** in prose; `cma-event-pipeline` is the stable HA slug
-and `frigate-cma-events` the core repository/image, all for one monitoring app.
+[deployment overview](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md)
+([中文](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.zh-CN.md)).
+Use **Video Event Monitor** in prose; `video-event-monitor` is the stable HA slug
+and `video-event-monitor` the core repository/image, all for one monitoring app.
 
 ## What ships
 
@@ -20,7 +20,7 @@ and `frigate-cma-events` the core repository/image, all for one monitoring app.
 | `nyxid-node/` | `homeassistant_api: true` — HA Core REST only | Always installed. Main pipe between NyxID and HA. |
 | `nyxid-node-admin/` | adds `hassio_api: true` + `hassio_role: admin` | Temporary. Install only when you need Supervisor-level ops (install add-ons, manage host). **Uninstalling = physical revocation** of admin capability. |
 | homeassistant-event-relay/ | homeassistant_api: true — selected HA Event Bus and MQTT sources | Optional. Explicit routes only; persists an outbox in /data; HTTPS by default, explicit trusted local HTTP supported. |
-| cma-event-pipeline/ | No HA/Supervisor API permission or host ports | Video Event Monitor: HA Ingress page + owner rule API, persistent versioned rules; pinned upstream core, state in /data/state. |
+| video-event-monitor/ | No HA/Supervisor API permission or host ports | Video Event Monitor: HA Ingress page + owner rule API, persistent versioned rules; pinned upstream core, state in /data/state. |
 
 The ordinary node attempts automatic service provisioning when `ha_service_slug` is empty and `ha_service_label` is set. An explicit slug skips service-management API calls. The current admin variant requires an owner-created `supervisor_service_slug` and only pushes its local credential; it does not auto-create a service.
 
@@ -116,7 +116,7 @@ nyxid proxy request <lan-node-slug> "api/hassio/addons/8404a721_nyxid-node-admin
 
 The following version coupling is for the two node images. Relay and Monitor
 have independent config versions and publish workflows. Monitor pins the
-upstream `frigate-cma-events` core by immutable digest; do not copy core logic
+upstream `video-event-monitor` core by immutable digest; do not copy core logic
 into the HA packaging. Its CI includes an actual options/startup/UID smoke test.
 
 - Feature work on branches: `dev-vX.Y.Z` (but since we're small-scale, merging directly to `main` with pre-release tag is fine).
@@ -184,7 +184,7 @@ over `/api/websocket` with an admin LLAT.
 
 ## Pointers
 
-- [Deployment ownership and updates](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md) — names, event chain, configuration authority and rollout matrix
+- [Deployment ownership and updates](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md) — names, event chain, configuration authority and rollout matrix
 - `docs/ARCHITECTURE_NOTES.md` — full architecture reference, HA auth model deep dive, design rationale
 - `DEVELOPMENT.md` — chronological build history up to v1.0.0
 - `SETUP_GUIDE.md` — user-facing install walkthrough
@@ -225,7 +225,7 @@ Worker, delegated node and operator NyxID entries can point to one Monitor
 instance with different credentials. They are required routing/auth boundaries,
 not duplicate deployments. CMA managed keys currently cannot retain node grants
 ([#1111](https://github.com/ChronoAIProject/cma/issues/1111)); use the explicit
-one-service/one-node delegation documented in `cma-event-pipeline/README.md`.
+one-service/one-node delegation documented in `video-event-monitor/README.md`.
 Keep managed keys under CMA lifecycle control and privately track delegate expiry.
 
 Retire cloud apps/databases and failed worker attempts only after verifying the

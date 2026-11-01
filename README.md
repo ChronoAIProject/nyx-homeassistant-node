@@ -1,7 +1,7 @@
 # NyxID Home Assistant add-ons
 
-[架构、配置与更新总览（中文）](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md)
-· [Architecture and deployment](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
+[架构、配置与更新总览（中文）](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.zh-CN.md)
+· [Architecture and deployment](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md)
 
 Run [NyxID](https://github.com/ChronoAIProject/NyxID) local credential routing and
 configurable event processing on Home Assistant OS. This repository packages
@@ -12,7 +12,7 @@ four independent add-ons for amd64 and aarch64:
 | **NyxID Node** | Proxy Home Assistant and selected LAN services through an outbound NyxID connection | HA Core API; host network; persistent node identity/credentials in `/data` |
 | **NyxID Node (Admin)** | Temporary Supervisor management | Supervisor admin; install only for management work |
 | **Home Assistant Event Relay** | Filter selected MQTT / HA events and reliably forward CloudEvents | HA Core API; persistent SQLite outbox in `/data` |
-| **Video Event Monitor** (slug `cma-event-pipeline`) | Manage persistent monitoring rules in an HA page/API; aggregate events, select bounded evidence and deliver candidates to CMA | No HA/Supervisor API permission or host ports; SQLite in `/data/state` |
+| **Video Event Monitor** (slug `video-event-monitor`) | Manage persistent monitoring rules in an HA page/API; aggregate events, select bounded evidence and deliver candidates to CMA | No HA/Supervisor API permission or host ports; SQLite in `/data/state` |
 
 ## Installation
 
@@ -24,19 +24,21 @@ https://github.com/ChronoAIProject/nyx-homeassistant-node
 
 Install the add-ons your workflow needs. Experimental versions may require
 **Advanced mode** in your HA profile. This repository contains the HA packaging;
-[Video Event Monitor's core](https://github.com/ChronoAIProject/frigate-cma-events)
+[Video Event Monitor's core](https://github.com/ChronoAIProject/video-event-monitor)
 is maintained and tested separately, and pinned by image digest in its Dockerfile.
 
 ## Names and deployment locations
 
-**Video Event Monitor** is the HA display/product name. Its stable add-on
-directory/slug is `cma-event-pipeline`; its core repository/image package is
-`frigate-cma-events`. These refer to one monitoring application running on HA.
+**Video Event Monitor** uses `video-event-monitor` for the core repository/image
+and HA directory/slug. Its HA wrapper image is `video-event-monitor-ha`.
+These identify one monitoring application running on HA. Existing installations
+must [migrate their complete state](docs/monitor-identity-migration.md) before
+switching their installation ID.
 This repository supplies the HA wrapper and independent Relay/node add-ons.
 CMA channels/worker profiles and NyxBot notification automations are remote
 platform configuration; a NyxID service entry is an authenticated route.
 
-Use the [shared deployment overview](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
+Use the [shared deployment overview](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md)
 for the complete event-consumption diagram, configuration owners and update
 matrix. Dining, vehicle and HA activity are rule examples of the same monitor.
 
@@ -104,9 +106,9 @@ service entry is a credential/routing entry, not another application deployment.
 
 - [Relay configuration](homeassistant-event-relay/README.md): explicit sources,
   routes, heartbeat semantics and trusted local HTTP destinations.
-- [Monitor installation and operations](cma-event-pipeline/README.md): HA
+- [Monitor installation and operations](video-event-monitor/README.md): HA
   options, storage, worker access, migration, verification and retirement.
-- [Dining reference application](https://github.com/ChronoAIProject/frigate-cma-events/tree/main/examples/dining):
+- [Dining reference application](https://github.com/ChronoAIProject/video-event-monitor/tree/main/examples/dining):
   whole-table observations, a CMA worker and verified Sheets writes.
 
 The worker-facing evidence route, its node-bound delegate and the separate
@@ -173,9 +175,9 @@ Publishing a repository or image does not update an installed HA add-on.
 Worker templates also need applying to CMA; the HA rule editor does not manage
 remote prompts/permissions or provision notification receivers. There is no
 single cross-platform deployment command yet. Keep one private installation
-inventory and follow the [detailed rollout procedure](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md#applying-a-workerchannel-change).
+inventory and follow the [detailed rollout procedure](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md#applying-a-workerchannel-change).
 Node, Relay and Monitor have independent versions/workflows; a core change does
-not require releasing the node images. See [Monitor packaging](cma-event-pipeline/README.md#packaging-and-updates).
+not require releasing the node images. See [Monitor packaging](video-event-monitor/README.md#packaging-and-updates).
 
 ## Contributor references
 

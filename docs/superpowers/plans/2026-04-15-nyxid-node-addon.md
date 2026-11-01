@@ -17,8 +17,8 @@
 ---
 
 > Current names, runtime locations and update procedures are maintained in the
-> [deployment overview](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
-> ([中文](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md)).
+> [deployment overview](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md)
+> ([中文](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.zh-CN.md)).
 > This historical record is not the current installation or release procedure.
 
 ## File Map

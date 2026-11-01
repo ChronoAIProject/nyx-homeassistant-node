@@ -1,8 +1,8 @@
 # NyxID Node HA add-on — setup guide
 
 For names, runtime locations and update ownership, start with the
-[deployment overview](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
-([中文](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md)).
+[deployment overview](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md)
+([中文](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.zh-CN.md)).
 
 For an AI-assisted setup, inspect current add-on configuration and scripts.
 Use private HA fields or the supported NyxID credential-entry flow for secrets;
@@ -10,7 +10,7 @@ keep installation-specific values out of source, logs and public issues.
 
 This guide installs the ordinary credential node. The independent
 [Event Relay](homeassistant-event-relay/README.md) and
-[Video Event Monitor](cma-event-pipeline/README.md) have their own configuration
+[Video Event Monitor](video-event-monitor/README.md) have their own configuration
 and lifecycle. A browser/machine node is not needed for this event workflow.
 
 ## Prerequisites
@@ -164,7 +164,7 @@ Ordinary HA events and local pipeline processing do not require this add-on.
 ## Event workflow and retirement
 
 For Frigate/HA → aggregation → CMA, install the independent Relay and Monitor.
-See the [pipeline guide](cma-event-pipeline/README.md) for local URLs, distinct
+See the [pipeline guide](video-event-monitor/README.md) for local URLs, distinct
 credential roles, scoped worker delegation, testing, state migration and
 retirement. Images are selected on HA; the CMA worker performs visual inference.
 
@@ -185,7 +185,7 @@ their add-on. Monitoring rules use the page/API after their first import.
 Apply CMA worker and NyxID notification configuration separately; new channel
 URL/HMAC or cleanup pins must also be synchronized to HA. Documentation edits
 require no installed-runtime change. See the
-[update matrix](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md#which-changes-need-an-ha-upgrade).
+[update matrix](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md#which-changes-need-an-ha-upgrade).
 
 ## Troubleshooting
 

@@ -1,13 +1,14 @@
 # Video Event Monitor — local Home Assistant add-on
 
 For the complete component map, event chain and update matrix, read the
-[deployment overview](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
-([中文](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md)).
-The display name is **Video Event Monitor**; `cma-event-pipeline` remains the
-stable HA slug/directory, and `frigate-cma-events` is its core repository/image.
-These identify one installed monitoring application.
+[deployment overview](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.md)
+([中文](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/deployment.zh-CN.md)).
+The display name is **Video Event Monitor**; the repository, core image and HA
+slug/directory all use `video-event-monitor`. The HA wrapper image adds `-ha`.
+Existing installations must follow the [identity migration guide](../docs/monitor-identity-migration.md)
+to preserve their full rule registry, revisions, histories and queues.
 
-Run the generic [Video Event Monitor](https://github.com/ChronoAIProject/frigate-cma-events)
+Run the generic [Video Event Monitor](https://github.com/ChronoAIProject/video-event-monitor)
 beside Home Assistant and Frigate. The upstream repository owns the aggregation,
 evidence and HTTP code; this directory only packages its pinned image and maps
 explicit HA options. It needs no Supervisor admin, HA API, host network, Docker
@@ -25,9 +26,9 @@ HA / MQTT -> HA Event Relay -> this add-on /ingest
 
 ## Installation and configuration
 
-1. Add this repository to the HA add-on store and install **Video Event Monitor** (the existing `cma-event-pipeline` slug).
+1. Add this repository to the HA add-on store and install **Video Event Monitor** (slug `video-event-monitor`). Migrate existing installations first.
 2. Copy a fully resolved private JSON policy into `pipeline_config`. Use the
-   upstream [configuration guide](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/pipeline.md)
+   upstream [configuration guide](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/pipeline.md)
    and dining, HA-state or driveway examples. This imports `default` v1 once;
    after startup, manage multiple persistent rules in **Open web UI**.
    Do not commit installation data.
@@ -50,7 +51,7 @@ HA / MQTT -> HA Event Relay -> this add-on /ingest
    node authorization; CMA managed workers use the explicit delegation below.
    Keep a separate owner-only operator service injecting `api_token`.
 7. Point the selected HA Event Relay destination to
-   `http://EXAMPLE-cma-event-pipeline:8080/ingest` with `auth_type: bearer` and
+   `http://EXAMPLE-video-event-monitor:8080/ingest` with `auth_type: bearer` and
    `auth_token: <relay_token>`. Forward only explicitly selected events. Keep
    its source URI identical to the pipeline's source.
 
@@ -104,7 +105,7 @@ Updates/archive require `If-Match` or an integer JSON `expected_revision`
 with the current revision (428 when both are missing, 409 when stale).
 The body form supports proxies that omit conditional headers; if both are sent,
 they must agree. Relay/worker/provider credentials cannot edit rules. The full
-[management and API guide](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/monitoring.md)
+[management and API guide](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/monitoring.md)
 describes paths, migration and lifecycle behavior.
 
 For all camera rules to receive input, Relay must forward all Frigate review
@@ -168,7 +169,7 @@ into core settings. `app/run.py` prepares private state, optionally imports an
 empty state directory once, drops to UID/GID 1000 and execs the core's uvicorn.
 HA Supervisor manages install, boot, restart, update and backup.
 
-Core logic lives in `frigate-cma-events`; there is no second copy in this
+Core logic lives in `video-event-monitor`; there is no second copy in this
 repository. Publish/test a core release, update the pinned digest, bump this
 add-on's `config.yaml` version and publish its image before updating HA. The
 workflow builds amd64/arm64, tests the option mapping and boots the actual image
@@ -183,7 +184,7 @@ require a Monitor restart. Keep the rule registry and revision directories intac
 
 Worker model/prompt/grants and channel definitions live in CMA. Notification
 instructions and the fixed bot/chat live in NyxID. Template edits in
-`frigate-cma-events/examples/dining/` become active only after their remote
+`video-event-monitor/examples/dining/` become active only after their remote
 configuration is applied. The existing dining completion hook needs no new
 Monitor image: the worker performs verified completion notification.
 
@@ -192,7 +193,7 @@ profile/channel with the exact required services. Drain old deliveries, then
 change the Monitor's event URL/HMAC and pin cleanup to the new actual dedicated
 workspace/native profile. Save options and restart; independently check rules,
 history and delivery. Keep private rollback records. Do not assume new bindings
-reuse the old workspace. The [dining notification guide](https://github.com/ChronoAIProject/frigate-cma-events/tree/main/examples/dining#optional-completion-summaries)
+reuse the old workspace. The [dining notification guide](https://github.com/ChronoAIProject/video-event-monitor/tree/main/examples/dining#optional-completion-summaries)
 defines one-record replay and native receipt/deduplication checks.
 
 A merged PR or published core image does not change the installed digest.
@@ -257,7 +258,7 @@ one container are not redundant deployments.
    access and destination data after removal.
 
 The cloud deployment remains a supported upstream option for other installations.
-See the core [HA deployment guide](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/home-assistant.md)
+See the core [HA deployment guide](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/home-assistant.md)
 for shared credential roles and configuration mapping.
 
 ## Independent event contexts and health

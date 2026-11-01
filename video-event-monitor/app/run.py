@@ -45,7 +45,7 @@ def main():
         if origin.scheme != 'https' or not origin.hostname or origin.username or origin.password or origin.query or origin.fragment:
             raise ValueError('State import requires an HTTPS export URL without query or credentials')
         request = Request(url, headers={'Authorization': 'Bearer ' + config.api_token,
-                                       'User-Agent': 'cma-event-pipeline-ha/0.2.1'})
+                                       'User-Agent': 'video-event-monitor-ha/0.3.0-alpha.4'})
         with build_opener(NoRedirect).open(request, timeout=50) as response:
             raw = response.read(MAX_EXPORT_BYTES + 1)
         if len(raw) > MAX_EXPORT_BYTES:
@@ -63,5 +63,5 @@ if __name__ == '__main__':
         main()
     except Exception as exc:
         # Configuration can include credentials; do not dump it in add-on logs.
-        print('CMA Event Pipeline startup failed (%s); check private options and upstream availability.' % type(exc).__name__, file=sys.stderr)
+        print('Video Event Monitor startup failed (%s); check private options and upstream availability.' % type(exc).__name__, file=sys.stderr)
         sys.exit(1)
