@@ -4,6 +4,13 @@ The current slug is `video-event-monitor`. Core and HA package versions are
 separate; a worker/profile or documentation update does not imply a new installed
 add-on version. See [packaging and updates](README.md#packaging-and-updates).
 
+# 0.3.0-alpha.5
+
+- Repair ownership of the full private state tree before dropping privileges so
+  Supervisor-restored rule registries and nested history databases can open.
+  Reject links/special files and keep Supervisor's options outside this repair.
+- Exercise a restart with root-owned restored state in the packaged image smoke test.
+
 # 0.3.0-alpha.4
 
 - Unify the repository references, image packages, add-on directory/slug, panel

@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import stat
 import sys
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -14,6 +15,24 @@ sys.path.insert(0, '/app')
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
         return None
+
+
+def prepare_state(state, uid=1000, gid=1000):
+    """Repair Supervisor-restored ownership only inside the private state tree."""
+    entries = [state]
+    for root, directories, files in os.walk(state, followlinks=False):
+        entries.extend(Path(root) / name for name in directories + files)
+    # Validate the entire tree before changing any ownership. Never follow links
+    # or chown a hard-linked file that could also exist outside this directory.
+    for path in entries:
+        info = path.lstat()
+        if not (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)):
+            raise ValueError('State contains a link or unsupported file type')
+        if stat.S_ISREG(info.st_mode) and info.st_nlink != 1:
+            raise ValueError('State files cannot have multiple hard links')
+    for path in entries:
+        os.chown(path, uid, gid, follow_symlinks=False)
+        path.chmod(0o700 if path.is_dir() else 0o600)
 
 
 def main():
@@ -29,7 +48,7 @@ def main():
         # when a fresh volume starts as 0700. Keep the parent owned by root so
         # UID 1000 cannot replace Supervisor's private options.json.
         Path('/data').chmod(0o711)
-        os.chown(state, 1000, 1000)
+        prepare_state(state)
         os.setgroups([])
         os.setgid(1000)
         os.setuid(1000)
@@ -45,7 +64,7 @@ def main():
         if origin.scheme != 'https' or not origin.hostname or origin.username or origin.password or origin.query or origin.fragment:
             raise ValueError('State import requires an HTTPS export URL without query or credentials')
         request = Request(url, headers={'Authorization': 'Bearer ' + config.api_token,
-                                       'User-Agent': 'video-event-monitor-ha/0.3.0-alpha.4'})
+                                       'User-Agent': 'video-event-monitor-ha/0.3.0-alpha.5'})
         with build_opener(NoRedirect).open(request, timeout=50) as response:
             raw = response.read(MAX_EXPORT_BYTES + 1)
         if len(raw) > MAX_EXPORT_BYTES:

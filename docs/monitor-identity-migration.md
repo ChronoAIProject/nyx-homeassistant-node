@@ -30,7 +30,7 @@ From this repository, prepare a separate backup for the renamed installation:
 
 ```sh
 python3 scripts/migrate_monitor_backup.py /private/old-monitor.tar \
-  /private/video-event-monitor.tar --target-version 0.3.0-alpha.4 \
+  /private/video-event-monitor.tar --target-version 0.3.0-alpha.5 \
   > /private/migration-report.json
 ```
 
@@ -52,9 +52,16 @@ The helper prepares an archive; it does not call HA or switch live traffic.
 
 1. Start the new monitor. Obtain its actual hostname from Supervisor; the
    repository prefix is installation-specific.
-2. Update matching NyxID service endpoints and ordinary-node local targets, keeping
-   existing service IDs/grants and credentials. Verify owner and worker routes
-   reach the restored instance and retain their respective access restrictions.
+2. Update the ordinary node's local targets and matching NyxID routes. Keep stable
+   worker-facing service IDs/grants where supported. A current NyxID limitation
+   rejects metadata-only endpoint changes on node-managed services
+   ([NyxID #2126](https://github.com/ChronoAIProject/NyxID/issues/2126)). For those,
+   create replacement node-managed routes with the new target and canonical names,
+   install their credentials locally, grant only the new inner route/backing node
+   to the dedicated delegate, then change the stable outer worker service's proxy
+   URL. Retain old grants/routes until traffic drains; remove them after acceptance.
+   Do not upload a locally held credential merely to change routing metadata.
+   Verify owner and worker access restrictions independently.
 3. Compare all rules and revisions, historical decisions/results and outbox state
    against the private snapshot. Verify state ownership, current core/add-on
    versions and the Chinese/English page, including the full product name.
