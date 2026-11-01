@@ -1,5 +1,8 @@
 # NyxID Home Assistant add-ons
 
+[架构、配置与更新总览（中文）](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md)
+· [Architecture and deployment](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
+
 Run [NyxID](https://github.com/ChronoAIProject/NyxID) local credential routing and
 configurable event processing on Home Assistant OS. This repository packages
 four independent add-ons for amd64 and aarch64:
@@ -9,7 +12,7 @@ four independent add-ons for amd64 and aarch64:
 | **NyxID Node** | Proxy Home Assistant and selected LAN services through an outbound NyxID connection | HA Core API; host network; persistent node identity/credentials in `/data` |
 | **NyxID Node (Admin)** | Temporary Supervisor management | Supervisor admin; install only for management work |
 | **Home Assistant Event Relay** | Filter selected MQTT / HA events and reliably forward CloudEvents | HA Core API; persistent SQLite outbox in `/data` |
-| **Video Event Monitor** (CMA Event Pipeline slug) | Manage persistent monitoring rules in an HA page/API; aggregate events, select bounded evidence and deliver candidates to CMA | No HA/Supervisor API permission or host ports; SQLite in `/data/state` |
+| **Video Event Monitor** (slug `cma-event-pipeline`) | Manage persistent monitoring rules in an HA page/API; aggregate events, select bounded evidence and deliver candidates to CMA | No HA/Supervisor API permission or host ports; SQLite in `/data/state` |
 
 ## Installation
 
@@ -21,8 +24,21 @@ https://github.com/ChronoAIProject/nyx-homeassistant-node
 
 Install the add-ons your workflow needs. Experimental versions may require
 **Advanced mode** in your HA profile. This repository contains the HA packaging;
-[CMA Event Pipeline's core](https://github.com/ChronoAIProject/frigate-cma-events)
+[Video Event Monitor's core](https://github.com/ChronoAIProject/frigate-cma-events)
 is maintained and tested separately, and pinned by image digest in its Dockerfile.
+
+## Names and deployment locations
+
+**Video Event Monitor** is the HA display/product name. Its stable add-on
+directory/slug is `cma-event-pipeline`; its core repository/image package is
+`frigate-cma-events`. These refer to one monitoring application running on HA.
+This repository supplies the HA wrapper and independent Relay/node add-ons.
+CMA channels/worker profiles and NyxBot notification automations are remote
+platform configuration; a NyxID service entry is an authenticated route.
+
+Use the [shared deployment overview](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
+for the complete event-consumption diagram, configuration owners and update
+matrix. Dining, vehicle and HA activity are rule examples of the same monitor.
 
 ## Set up NyxID Node
 
@@ -69,7 +85,7 @@ from that server. HA options and backups can also contain secrets.
 ```text
 Frigate / MQTT / selected HA Event Bus events
     -> Home Assistant Event Relay (filter + durable queue)
-    -> CMA Event Pipeline on HA (aggregate + limits + historical selection)
+    -> Video Event Monitor on HA (aggregate + limits + historical selection)
     -> signed CMA Event Channel -> CMA visual worker -> configured destination
 
 CMA worker -> NyxID -> ordinary HA node -> local pipeline /evidence and /results
@@ -80,12 +96,15 @@ CMA worker -> NyxID -> ordinary HA node -> local pipeline /evidence and /results
 Raw recordings remain with Frigate and its configured storage. The local
 pipeline samples historical frames and exposes only bounded candidate evidence.
 CMA workers and NyxBot remain remote; selected images are sent to the worker for
-analysis. This topology needs no cloud aggregation app or MongoDB. A NyxID
+analysis. For optional completion summaries, the worker verifies its destination
+write and callback, then calls a scoped NyxID webhook. An existing NyxBot reads
+the stored result in a new thread and sends it to a fixed authorized chat.
+This topology needs no cloud aggregation app or MongoDB. A NyxID
 service entry is a credential/routing entry, not another application deployment.
 
 - [Relay configuration](homeassistant-event-relay/README.md): explicit sources,
   routes, heartbeat semantics and trusted local HTTP destinations.
-- [Pipeline installation and operations](cma-event-pipeline/README.md): HA
+- [Monitor installation and operations](cma-event-pipeline/README.md): HA
   options, storage, worker access, migration, verification and retirement.
 - [Dining reference application](https://github.com/ChronoAIProject/frigate-cma-events/tree/main/examples/dining):
   whole-table observations, a CMA worker and verified Sheets writes.
@@ -136,8 +155,27 @@ nyxid proxy request <supervisor-service-slug> "addons"
 
 Supervisor admin can install/remove add-ons and change host state. Grant this
 route only to intended operators. Uninstall the admin add-on when finished and
-retire its unused service/key grants. The Relay and Pipeline do not require it
+retire its unused service/key grants. The Relay and Monitor do not require it
 for normal operation.
+
+## Updates
+
+| Change | Apply where | Installed HA image upgrade? |
+| --- | --- | --- |
+| Monitoring rule/evidence parameters | HA page/owner API; new persistent revision | No |
+| Monitor/Relay/node connection options or credentials | Save private options; restart the affected add-on | No |
+| Worker prompt/model/grants or notification automation | CMA/NyxID management APIs; synchronize changed channel/signing/cleanup settings to HA | No core image change for the existing completion hook |
+| Monitor core/UI code | Publish core, update HA digest/version, publish HA image, upgrade installed add-on | Yes |
+| HA wrapper, Relay or node code | Publish/upgrade the affected add-on | Yes |
+| Documentation | Publish docs | No |
+
+Publishing a repository or image does not update an installed HA add-on.
+Worker templates also need applying to CMA; the HA rule editor does not manage
+remote prompts/permissions or provision notification receivers. There is no
+single cross-platform deployment command yet. Keep one private installation
+inventory and follow the [detailed rollout procedure](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md#applying-a-workerchannel-change).
+Node, Relay and Monitor have independent versions/workflows; a core change does
+not require releasing the node images. See [Monitor packaging](cma-event-pipeline/README.md#packaging-and-updates).
 
 ## Contributor references
 
@@ -147,7 +185,7 @@ for normal operation.
 - [Development history](DEVELOPMENT.md) and dated design documents — historical
   decisions; use current configuration/scripts for installation.
 
-The local event add-ons expose separate operator health: Pipeline `/api/status`
+The local event add-ons expose separate operator health: Monitor `/api/status`
 uses its owner API token; Relay optionally enables an internal `/api/status`
 with a distinct diagnostic token. Both emit credential-free minute summaries.
 Independent candidate analysis uses a profile-managed CMA channel partitioned

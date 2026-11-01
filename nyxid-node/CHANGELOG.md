@@ -1,5 +1,9 @@
 # Changelog
 
+Release history for this node variant. Installed versions are checked through HA;
+Relay and Video Event Monitor have independent releases. See
+[component/update ownership](../README.md#updates).
+
 ## 1.1.1-alpha.50
 
 - Bump bundled nyxid agent to 0.76.0 (auto-bumped by watch-nyxid workflow).

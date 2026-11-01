@@ -4,6 +4,11 @@
 > differ from the current implementation. Use [the current setup guide](../../../SETUP_GUIDE.md)
 > and checked-in schemas/scripts for installation and operation.
 
+> Current names, runtime locations and update procedures are maintained in the
+> [deployment overview](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
+> ([中文](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md)).
+> This historical record is not the current installation or release procedure.
+
 ## Problem
 
 The Add-on needs to register a NyxID credential node on HAOS, create a proxy-visible service, and keep credentials in sync — while respecting NyxID's auth model where only JWT sessions can create proxyable services.

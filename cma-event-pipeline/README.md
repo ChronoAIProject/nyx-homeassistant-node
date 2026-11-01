@@ -1,6 +1,13 @@
 # Video Event Monitor — local Home Assistant add-on
 
-Run the generic [CMA Event Pipeline](https://github.com/ChronoAIProject/frigate-cma-events)
+For the complete component map, event chain and update matrix, read the
+[deployment overview](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
+([中文](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md)).
+The display name is **Video Event Monitor**; `cma-event-pipeline` remains the
+stable HA slug/directory, and `frigate-cma-events` is its core repository/image.
+These identify one installed monitoring application.
+
+Run the generic [Video Event Monitor](https://github.com/ChronoAIProject/frigate-cma-events)
 beside Home Assistant and Frigate. The upstream repository owns the aggregation,
 evidence and HTTP code; this directory only packages its pinned image and maps
 explicit HA options. It needs no Supervisor admin, HA API, host network, Docker
@@ -167,9 +174,36 @@ add-on's `config.yaml` version and publish its image before updating HA. The
 workflow builds amd64/arm64, tests the option mapping and boots the actual image
 with Supervisor-style options to check health and state ownership.
 
+### Configuration and worker updates
+
+Rule changes save as persistent revisions in the HA page/API, without rebuilding
+or restarting the image. Startup `pipeline_config` only initializes imported
+`default` v1. HA connection, signing, credential, timer and cleanup options still
+require a Monitor restart. Keep the rule registry and revision directories intact.
+
+Worker model/prompt/grants and channel definitions live in CMA. Notification
+instructions and the fixed bot/chat live in NyxID. Template edits in
+`frigate-cma-events/examples/dining/` become active only after their remote
+configuration is applied. The existing dining completion hook needs no new
+Monitor image: the worker performs verified completion notification.
+
+When an immutable binding refuses scope expansion, prepare and test a new
+profile/channel with the exact required services. Drain old deliveries, then
+change the Monitor's event URL/HMAC and pin cleanup to the new actual dedicated
+workspace/native profile. Save options and restart; independently check rules,
+history and delivery. Keep private rollback records. Do not assume new bindings
+reuse the old workspace. The [dining notification guide](https://github.com/ChronoAIProject/frigate-cma-events/tree/main/examples/dining#optional-completion-summaries)
+defines one-record replay and native receipt/deduplication checks.
+
+A merged PR or published core image does not change the installed digest.
+Documentation edits require no HA version bump/installed-image upgrade. CI may
+still publish an image according to its path triggers; inspect installed resources
+to determine what actually runs. Runtime code changes use the full packaging
+release sequence above. There is currently no single deploy command for HA/CMA/NyxID.
+
 ## Verification
 
-1. Verify both Relay and Pipeline are running, Relay targets this internal
+1. Verify both Relay and Monitor are running, Relay targets this internal
    `/ingest`, and its metadata source/heartbeat agrees with the policy.
 2. Read `healthz`, `api/status` and `api/pipeline` through the owner operator
    route. Confirm the worker route cannot access `api/status` / `api/pipeline`.
@@ -189,13 +223,13 @@ with Supervisor-style options to check health and state ownership.
    camera framing, detection/quiet-window behavior and dish visibility during
    an actual meal. End-to-end plumbing does not prove recognition accuracy.
 
-Restart Pipeline and verify state/results/outbox persist. Its CMA pending count
+Restart Monitor and verify state/results/outbox persist. Its CMA pending count
 is separate from Relay's delivery backlog. Selected images are volatile cached
 artifacts; durable state and raw Frigate recordings have separate lifecycles.
 
 ## Retiring a migrated cloud deployment or failed worker
 
-Keep the current Relay, Pipeline, ordinary node, worker, channel and required
+Keep the current Relay, Monitor, ordinary node, worker, channel and required
 routing/delegation/operator services. Different credential roles pointing to
 one container are not redundant deployments.
 

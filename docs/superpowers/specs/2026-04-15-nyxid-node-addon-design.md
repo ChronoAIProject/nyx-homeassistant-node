@@ -4,6 +4,11 @@
 > differ from the current implementation. Use [the current setup guide](../../../SETUP_GUIDE.md)
 > and checked-in schemas/scripts for installation and operation.
 
+> Current names, runtime locations and update procedures are maintained in the
+> [deployment overview](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
+> ([中文](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md)).
+> This historical record is not the current installation or release procedure.
+
 ## Overview
 
 A Home Assistant Add-on that packages the NyxID credential node agent (Rust) as a Docker container running on HAOS. The node agent connects to a NyxID server via outbound WebSocket, receives proxy requests, injects locally-stored credentials, and forwards them to Home Assistant and other LAN services. Credentials never leave the local network.

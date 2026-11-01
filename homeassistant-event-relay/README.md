@@ -1,5 +1,10 @@
 # Home Assistant Event Relay
 
+This is the event transport for [Video Event Monitor](../cma-event-pipeline/README.md).
+See the [architecture/deployment guide](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.md)
+([中文](https://github.com/ChronoAIProject/frigate-cma-events/blob/main/docs/deployment.zh-CN.md))
+for component locations, configuration owners and update boundaries.
+
 This add-on is a configurable, local event relay. It can subscribe to selected
 Home Assistant Event Bus event types and MQTT topics, filter them with declarative
 rules, redact JSON paths, and deliver CloudEvents to configured authenticated HTTP endpoints. HTTPS is
@@ -14,7 +19,7 @@ Assistant until a route is configured. Destination URLs use HTTPS by default and
 credentials are add-on password options. The SQLite outbox is kept in `/data`
 and retries transient delivery failures after restarts.
 
-For a trusted local add-on such as [CMA Event Pipeline](../cma-event-pipeline/README.md),
+For a trusted local add-on such as [Video Event Monitor](../cma-event-pipeline/README.md),
 set a destination's `allow_local_http: true` explicitly. HTTP is then accepted
 only for a private IP or a Supervisor add-on hostname (`core-…`, `local-…` or
 the repository hash prefix), with the normal bearer credential. Public HTTP,
@@ -100,15 +105,20 @@ because a connection does not prove producer history was recovered. The
 downstream consumer must repair gaps against its source API before treating
 silence as a quiet period.
 
-The add-on does not call CMA directly. The separate Pipeline validates the
+The add-on does not call CMA directly. The separate Monitor validates the
 relay token, aggregates metadata and signs only candidate events for CMA. It
 can run on the same HA host or on an explicitly configured remote deployment.
-The CMA HMAC secret belongs to Pipeline configuration, not Relay options.
+The CMA HMAC secret belongs to Monitor configuration, not Relay options.
 For a remote destination use HTTPS and omit `allow_local_http`; no cloud
 aggregation app is required for the local topology.
 
-The relay forwards metadata only. Image selection and model work belong to the
-downstream application.
+The relay forwards metadata only. Video Event Monitor selects historical images
+on HA; the remote CMA worker performs model inference and result writes. Optional
+completion summaries use the worker's scoped notification hook and NyxID receiver.
+Relay has its own options, data volume, version and lifecycle. Changing routes or
+broker credentials requires saving options and restarting Relay; changing its
+program requires publishing/upgrading the Relay add-on. Worker prompt changes
+are applied in CMA and do not require upgrading Relay.
 
 ## End-to-end application example
 
@@ -125,19 +135,19 @@ the reusable event transport.
 
 Use the actual internal hostname from Supervisor's add-on information; the
 repository prefix varies by installation. `0123abcd` above is synthetic.
-Relay's `auth_token` must equal the receiving Pipeline's `relay_token`.
+Relay's `auth_token` must equal the receiving Monitor's `relay_token`.
 A worker/operator credential is not an ingest credential.
 
 When moving an existing route, keep its destination ID and change only the
 URL/credential/local-HTTP option deliberately. Durable queued entries reference
 that ID; renaming it can strand old deliveries. Do not infer an empty Relay
-queue from Pipeline's `cma_deliveries.pending`: they are separate outboxes.
+queue from Monitor's `cma_deliveries.pending`: they are separate outboxes.
 
 Verify actual delivery and downstream candidate/result processing before
-removing a retired destination or cloud application. A synthetic Pipeline replay
+removing a retired destination or cloud application. A synthetic Monitor replay
 has no external side effects; explicit integration validation exercises its
 outbound CMA/worker path and bypasses MQTT admission. A real source event is
-needed to validate that upstream path. See the [Pipeline runbook](../cma-event-pipeline/README.md)
+needed to validate that upstream path. See the [Monitor runbook](../cma-event-pipeline/README.md)
 for the full test and cleanup sequence.
 
 ## Diagnostics
