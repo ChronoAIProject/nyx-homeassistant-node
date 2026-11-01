@@ -85,8 +85,8 @@ jobs:
           docker start pipeline-smoke
           for attempt in {1..20}; do
             if curl --fail --silent http://127.0.0.1:18080/healthz; then
-              test "$(stat -c %u "$pipeline_test_dir/state/monitoring.sqlite3")" = 1000
-              test "$(stat -c %u "$pipeline_test_dir/state/rules/restored/1/probe")" = 1000
+              test "$(sudo stat -c %u "$pipeline_test_dir/state/monitoring.sqlite3")" = 1000
+              test "$(sudo stat -c %u "$pipeline_test_dir/state/rules/restored/1/probe")" = 1000
               test "$(sudo cat "$pipeline_test_dir/state/rules/restored/1/probe")" = preserved
               curl --fail --silent -H "Authorization: Bearer $(python -c 'print("a"*48)')" http://127.0.0.1:18080/api/rules | python -c 'import json,sys; assert json.load(sys.stdin)["rules"][0]["id"] == "default"'
               exit 0
