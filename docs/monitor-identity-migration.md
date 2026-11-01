@@ -4,9 +4,11 @@ The product, core repository/image, HA directory and add-on slug now use
 **Video Event Monitor** / `video-event-monitor`. The HA wrapper image is
 `ghcr.io/chronoaiproject/video-event-monitor-ha`.
 
-The former core repository `frigate-cma-events` redirects to the new repository;
-old image digests remain available for rollback. HA does not redirect an add-on
-identity: the former `cma-event-pipeline` installation must be migrated. Do not
+The former core repository `frigate-cma-events` redirects to the new repository.
+The legacy GHCR core package has been retired; use the canonical images above.
+Backups preserve state, but do not guarantee that a retired image can be pulled.
+HA does not redirect an add-on identity: the former `cma-event-pipeline`
+installation must be migrated. Do not
 install an empty replacement and discard the original data. Changing directory
 names alone does not move rules or history.
 
@@ -14,13 +16,17 @@ names alone does not move rules or history.
 
 1. Publish the renamed core and HA image; verify both architecture manifests and
    access from HA. Refresh the Supervisor store and verify the new add-on is listed.
-2. Export private options and record the old add-on hostname, Relay destination,
+2. Retain or rebuild the exact images needed for rollback before removing them
+   from a registry. Verify their availability; a recorded digest alone is not an
+   image backup. Prefer restoring a current canonical-installation backup after
+   migration acceptance.
+3. Export private options and record the old add-on hostname, Relay destination,
    NyxID service targets, current rules/revisions, decision/result counts, active
    CMA work and both outboxes. Retain the original backups and credential references.
-3. Wait for active analysis/callbacks and CMA deliveries to drain. Stop Relay,
+4. Wait for active analysis/callbacks and CMA deliveries to drain. Stop Relay,
    then stop the old monitor. Keep both stopped while taking the final backup and
    switching targets; this prevents competing writers and duplicate deliveries.
-4. Use Supervisor to create an **unencrypted partial backup of only the stopped
+5. Use Supervisor to create an **unencrypted partial backup of only the stopped
    monitor**, with no HA/folders selected. Download it to private local storage.
    The file contains credentials and should have mode `0600`.
 
