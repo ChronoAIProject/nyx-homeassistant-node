@@ -4,6 +4,17 @@ The current slug is `video-event-monitor`. Core and HA package versions are
 separate; a worker/profile or documentation update does not imply a new installed
 add-on version. See [packaging and updates](README.md#packaging-and-updates).
 
+# 0.4.0-alpha.1
+
+- Pin core 0.4.0 with revision-owned analysis instructions/settings and a shared
+  scenario-worker protocol. Routine analysis edits apply through rule revisions.
+- Add dining, driveway and HA-event templates, third-party JSON import, private
+  parameter binding and workflow editing in the HA page. New templates need no
+  image release when they use supported adapters and options.
+- Preserve existing rules, queues, results and callback revisions. Existing
+  scenario-specific workers remain compatible; shared analysis needs a one-time
+  worker protocol migration. See the upstream scenario guide.
+
 # 0.3.0-alpha.6
 
 - Pin core 0.3.4 with opt-in recording-index alignment, bounded nearby snapshot
