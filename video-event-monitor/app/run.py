@@ -64,7 +64,7 @@ def main():
         if origin.scheme != 'https' or not origin.hostname or origin.username or origin.password or origin.query or origin.fragment:
             raise ValueError('State import requires an HTTPS export URL without query or credentials')
         request = Request(url, headers={'Authorization': 'Bearer ' + config.api_token,
-                                       'User-Agent': 'video-event-monitor-ha/0.3.0-alpha.5'})
+                                       'User-Agent': 'video-event-monitor-ha/0.3.0-alpha.6'})
         with build_opener(NoRedirect).open(request, timeout=50) as response:
             raw = response.read(MAX_EXPORT_BYTES + 1)
         if len(raw) > MAX_EXPORT_BYTES:

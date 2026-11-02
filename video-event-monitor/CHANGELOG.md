@@ -4,6 +4,16 @@ The current slug is `video-event-monitor`. Core and HA package versions are
 separate; a worker/profile or documentation update does not imply a new installed
 add-on version. See [packaging and updates](README.md#packaging-and-updates).
 
+# 0.3.0-alpha.6
+
+- Pin core 0.3.4 with opt-in recording-index alignment, bounded nearby snapshot
+  retries, actual/requested timestamp metadata and explicit missing coverage.
+- Support optional observations before configured object tracks end within the
+  existing source-frame, selected-frame, time and page budgets. Track ending
+  does not establish removal or consumption.
+- Keep all stored rules, revisions, results and deployment settings. Enable the
+  new evidence options through a managed rule revision when desired.
+
 # 0.3.0-alpha.5
 
 - Repair ownership of the full private state tree before dropping privileges so
