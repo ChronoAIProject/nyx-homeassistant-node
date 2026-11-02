@@ -285,3 +285,5 @@ state; `context_cleanup.scan_limited` reports that later runs have more to scan.
 `api/status` reports cleanup health and pending/delivered/permanently failed CMA
 deliveries. A credential-free summary is logged every minute. Relay queue status
 is separate; enable its owner-only diagnostic endpoint to inspect it directly.
+
+Use [portable scenarios and live analysis workflows](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/scenarios.md) to import third-party templates, bind local settings and edit analysis instructions without repeated image upgrades. A shared scenario worker is configured once; service grants remain explicit.
