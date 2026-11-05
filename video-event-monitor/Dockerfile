@@ -1,5 +1,5 @@
 # Pinned to a tested upstream core; both architectures use the same implementation.
-ARG BUILD_FROM=ghcr.io/chronoaiproject/video-event-monitor@sha256:612a003d7a90bbf5d132f6b7f9cb23c771654bc24ac0b71e5494cb7455bae28c
+ARG BUILD_FROM=ghcr.io/chronoaiproject/video-event-monitor@sha256:337dcb08c6b60df278d3bf17c3c087b1950beade0be0c33f5a44b9cbb49a110f
 FROM ${BUILD_FROM}
 USER root
 COPY app /addon

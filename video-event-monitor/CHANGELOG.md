@@ -4,6 +4,17 @@ The current slug is `video-event-monitor`. Core and HA package versions are
 separate; a worker/profile or documentation update does not imply a new installed
 add-on version. See [packaging and updates](README.md#packaging-and-updates).
 
+# 0.5.0-alpha.1
+
+- Pin core 0.5.0 with optional overview and original-resolution region views.
+  Workers can locate objects in one overview and request one bounded batch of
+  native crops through the same evidence endpoint, within three total images.
+- Retain native source pixels privately for the cached session; crop requests
+  make no additional camera reads or model calls and do not block ingestion.
+- Enable with `evidence.options.detail_regions` (1..8) and a compatible analysis
+  workflow. Routine crop-selection instructions and settings use rule edits.
+  Existing evidence modes, synthetic validation and stored history remain compatible.
+
 # 0.4.0-alpha.1
 
 - Pin core 0.4.0 with revision-owned analysis instructions/settings and a shared
