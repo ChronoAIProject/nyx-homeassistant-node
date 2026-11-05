@@ -108,6 +108,15 @@ they must agree. Relay/worker/provider credentials cannot edit rules. The full
 [management and API guide](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/monitoring.md)
 describes paths, migration and lifecycle behavior.
 
+Core 0.5.0 adds optional overview and native region views. Set
+`evidence.options.detail_regions` to 1..8 in a rule and use an analysis workflow
+that follows the evidence's `region_views` instructions. The worker locates
+visible objects in one overview, then POSTs one batch of normalized frame boxes
+to the same evidence endpoint. The service crops retained original-resolution
+pixels into at most two detail pages, within three total images, without new
+camera reads or model calls. Existing modes default to 0. See the upstream
+[protocol and limits](https://github.com/ChronoAIProject/video-event-monitor/blob/main/docs/pipeline.md#overview-and-native-region-views).
+
 For all camera rules to receive input, Relay must forward all Frigate review
 subjects plus a separate shared-bridge heartbeat with `subject: "*"` and the
 same source URI. The service filters events per rule. A local Frigate URL enables
