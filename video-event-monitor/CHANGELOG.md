@@ -4,6 +4,15 @@ The current slug is `video-event-monitor`. Core and HA package versions are
 separate; a worker/profile or documentation update does not imply a new installed
 add-on version. See [packaging and updates](README.md#packaging-and-updates).
 
+# 0.5.0-alpha.2
+
+- Pin the tested core cleanup repair: use completed transcript timestamps and
+  current pending-input evidence before retiring an idle child Agent.
+- Track accepted Stop/Delete operations across scans and count retirement only
+  after the original Agent is confirmed Deleted. Preserve shared parent resources.
+- Keep the existing rule registry, evidence, results and delivery state on upgrade.
+  Cleanup still requires supported scoped lifecycle authority from the provider.
+
 # 0.5.0-alpha.1
 
 - Pin core 0.5.0 with optional overview and original-resolution region views.
